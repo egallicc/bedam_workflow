@@ -2,7 +2,7 @@
 		    =============================
 
 			  Emilio Gallicchio
-		       emilio@biomaps.rutgers.edu
+		      emilio.gallicchio@gmail.com
 
  Please acknowledge use of this software citing the following publication:
 
@@ -14,8 +14,6 @@
  -------------------------
 
  Copyright (c) 2010-2013 Emilio Gallicchio, emilio.gallicchio@gmail.com
-
- This software (BEDAM WORKFLOW v1.0) was developed by Emilio Gallicchio
 
  License Agreement and Disclaimers
  ---------------------------------
