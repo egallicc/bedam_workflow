@@ -13,10 +13,9 @@
  Copyright and Disclaimers
  -------------------------
 
- Copyright (c) 2010-2013 Emilio Gallicchio
+ Copyright (c) 2010-2013 Emilio Gallicchio, emilio.gallicchio@gmail.com
 
  This software (BEDAM WORKFLOW v1.0) was developed by Emilio Gallicchio
- at Rutgers University, 610 Taylor Rd., Piscataway, NJ 08854, U.S.A.
 
  License Agreement and Disclaimers
  ---------------------------------
