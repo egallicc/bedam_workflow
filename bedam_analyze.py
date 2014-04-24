@@ -5,7 +5,7 @@ $Revision: 0.1 $
 BEDAM analysis script
 
 """
-# Contributors: Emilio Gallicchio
+# Contributors: Emilio Gallicchio, Junchao Xia
 
 import os, sys, time
 from operator import itemgetter, attrgetter

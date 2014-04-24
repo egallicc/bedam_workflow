@@ -1,0 +1,30 @@
+
+1) read hostguest_lab_instructions.pdf
+
+   prepare the input files
+ 
+   bcd-benzene.cntl  bcd_recpt.maegz  benzene_lig.maegz
+
+2) prepare the input files 
+
+   source /home/tuf29141/set_schrod.b3.bashrc
+   $SCHRODINGER/run /home/tuf29141/software/bedam_workflow/bedam_prep.py bcd-benzene.cntl >& bedam_prep.log &
+   
+
+3)  run the minimization/thermalization calculation 
+
+    source /home/tuf29141/set_schrod.b3.bashrc
+    qsub bcd-benzene_mintherm.qsub
+
+4) run the production REMD simulation 
+   source /home/tuf29141/set_schrod.b3.bashrc
+   qsub bcd-benzene_remd.qsub
+
+5) run a script for analyzing the simulation data    
+   source ~/set_schrod.b3.bashrc
+   $SCHRODINGER/run /home/tuf29141/software/bedam_workflow/bedam_analyze.py bcd-benzene.cntl >& bedam_analyze.log
+
+
+
+
+

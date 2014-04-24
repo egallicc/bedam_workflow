@@ -5,7 +5,7 @@ $Revision: 0.1 $
 A class to prepare and analyze BEDAM jobs
 
 """
-# Contributors: Emilio Gallicchio
+# Contributors: Emilio Gallicchio, Junchao Xia
 
 import os, sys, time, re, glob
 from operator import itemgetter, attrgetter
@@ -17,9 +17,16 @@ import schrodinger.utils.log
 import shutil
 import signal
 import glob
+import time
+
+import sqlite3 as lite
 
 from math import *
 from numpy import * # numerical array library
+
+#sys.path.append('/home/tuf29141/software/bedam_workflow/pymbar-2.0beta/pymbar')
+#import MBAR
+sys.path.append('/home/tuf29141/software/bedam_workflow/pymbar-1.0d/pymbar')
 import MBAR
 
 
@@ -35,9 +42,21 @@ class bedam_job:
         self.jobname = os.path.splitext( os.path.basename(command_file) )[0]
         self.impact = os.path.join(os.environ['SCHRODINGER'],'impact')
 
-        self.setupTemplates()
-
         self.parseInputFile()
+        self.impact_package =  self.keywords.get('IMPACT_PACKAGE')
+        if self.impact_package is None:
+            msg = "bedam_prep: No impact_package specified in the input file"
+            self.exit(msg) 
+        
+        if self.impact_package == "commercial" :
+            self.setupTemplates()
+        elif self.impact_package == "academic" :   
+            self.setupTemplatesDMS()
+        elif self.impact_package == "wcg" :
+            self.setupTemplatesWCG()
+        else: 
+            msg = "bedam_prep: The impact package specified in the input file is not right"
+            self.exit(msg)
 
         self.printStatus() #debug: write out the parameters, etc.
 
@@ -66,9 +85,11 @@ class bedam_job:
             print k, v
 
 #
-# Impact input file templates
+# Impact input file templates for commerical impact
 #
     def setupTemplates(self):
+        """ Setup templates for input files for commerical impact"""
+
         self.input_idx =  """
 write file -
 "%s" -
@@ -463,7 +484,897 @@ endwhile
 END
 """
 
+#
+# Impact input file templates for academic
+#
+    def setupTemplatesDMS(self):
+        """ Setup templates for input files for academic impact"""
+        self.input_cms =  """
+task {
+  task = "desmond:auto"
+}
 
+build_geometry {
+  box = {
+     shape = "orthorhombic"
+     size = [10.0 10.0 10.0 ]
+     size_type = "absolute"
+  }
+  neutralize_system = false
+  rezero_system = false
+  solvate_system = false
+}
+
+assign_forcefield {
+}
+
+"""  
+        self.input_agbnp2 =  """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics consolv agbnp2
+    weight constraints buffer 25.000000
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINIMIZE
+  input cntl mxcyc 0  rmscut 0.05 deltae 1.0e-05
+  conjugate dx0 0.05 dxm 1.0
+  run
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
+QUIT
+
+END
+"""
+        self.input_idx =  """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics consolv agbnp2
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINIMIZE
+  input cntl mxcyc 0  rmscut 0.05 deltae 1.0e-05
+  conjugate dx0 0.05 dxm 1.0
+  run
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
+QUIT
+
+END
+"""
+        self.input_mintherm = """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics consolv agbnp2
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy rest domain cmdist kdist %s dist0 %s toldist %s -
+      read file "%s"
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINIMIZE
+  conjugate dx0 5.000000e-02 dxm 1.000000e+00
+  input cntl mxcyc 200 rmscut 1.000000e-02 deltae 1.000000e-07
+  run
+QUIT
+
+put 100 into 'temp0'
+put %s into 'tempt'
+put 10 into 'n'
+put 'tempt'- 'temp0' into 'dtemp'
+put 'dtemp' / 'n' into 'dt'
+
+put 0 into 'i'
+while 'i' lt 'n'
+
+DYNAMICS
+  input cntl nstep 1000 delt 0.0005
+  input cntl constant totalenergy
+  input cntl initialize temperature at 'temp0'
+  input cntl nprnt 100
+  input cntl tol 1.00000e-07
+  input cntl stop rotations
+  input cntl statistics off
+  run rrespa fast 8
+QUIT
+
+put 'temp0' + 'dt' into 'temp0'
+put 'i' + 1 into 'i'
+
+endwhile
+
+DYNAMICS
+  write restart coordinates formatted file "%s"  
+  write sqldb file "%s"
+QUIT
+
+END
+"""
+        self.input_remd = """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics nb12softcore umax %s %s consolv agbnp2
+    weight constraints buffer %s
+    weight bind rxid 0 nrep %d %s
+%s
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy rest domain cmdist kdist %s dist0 %s toldist %s -
+      read file "%s"
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINI
+  read restart coordinates formatted file "%s"
+QUIT
+
+DYNAMICS
+  input cntl nstep %s delt 0.001
+  input cntl constant temperature langevin relax 10.0 -
+      rxmd nwalkers %d nstepexch %s -
+      hamiltonian
+  input target temperature %s
+  input cntl initialize temperature at %s
+  input cntl nprnt %s
+  input cntl tol 1.00000e-07
+  input cntl statistics off
+  run rrespa fast 4
+QUIT
+
+DYNAMICS
+  input cntl nstep %s delt 0.001
+  input cntl constant temperature langevin relax 1.0
+  input cntl rxmd nwalkers %d nstepexch 200 -
+      hamiltonian %s
+  input target temperature %s
+  input cntl initialize temperature at %s
+  input cntl nprnt %s
+  input cntl tol 1.00000e-07
+  input cntl statistics off
+  write trajectory coordinates rxid every %s -
+      external file "%s"
+  run rrespa fast 4
+  write restart coordinates rxid formatted file "%s"  
+  write sqldb file -
+   "%s"
+QUIT
+
+END
+"""
+
+        self.input_remd_restart = """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics nb12softcore umax %s %s consolv agbnp2
+    weight constraints buffer %s
+    weight bind rxid 0 nrep %d %s
+%s
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy rest domain cmdist kdist %s dist0 %s toldist %s -
+      read file "%s"
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+DYNAMICS
+  input cntl nstep %s delt 0.001
+  input cntl constant temperature langevin relax 1.0
+  input cntl rxmd nwalkers %d nstepexch 200 -
+      hamiltonian %s
+  input target temperature %s
+  input cntl initialize temperature at %s
+  input cntl nprnt %s
+  input cntl tol 1.00000e-07
+  input cntl statistics off
+  read restart coordinates rxid formatted file "%s"
+  write trajectory coordinates rxid every %s -
+      external file "%s"
+  run rrespa fast 4
+  write restart coordinates rxid formatted file "%s"  
+  write sqldb file -
+   "%s"
+QUIT
+
+END
+"""
+
+
+
+        self.input_reservoir = """ -
+    l0reservoir nreservoir %s resvrxid 0 -
+    traj nfile 2 maxrec %s nskip 1 delt 0.001 -
+    coordinates temperature every 1 -
+    traj fnames external file "%s" -
+                         file "%s" -
+    cmrestraints """
+
+  
+        self.input_trj = """
+
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics nb12softcore umax %s consolv agbnp2
+    weight constraints buffer %s
+    weight bind rxid 0 nrep %d %s
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+put 0 into 'repl'
+while 'repl' lt %d
+
+put $q$ concat (char 'repl') into 'bs3'
+put 'bs3' concat $.trj$ into 'trjname'
+
+show 'trjname'
+
+TABLE
+traj nfile 1 maxrec 50000000 nskip 1 delt 0.001 -
+coordinates rxid every 1 -
+traj fnames external file -
+'trjname'
+starttrack
+QUIT
+
+reset 'current.rxid'
+
+show 'repl'
+show 'current.rxid'
+
+put $q$ concat (char 'current.rxid') into 'ms3'
+put 'ms3' concat $.maegz$ into 'maename'
+
+MINIMIZE
+   conjugate dx0 5.000000e-02 dxm 1.000000e+00
+   input cntl mxcyc 0 rmscut 1.000000e-02 deltae 1.000000e-07
+   run
+   write maestro file 'maename' append
+QUIT
+
+TABLE
+stoptrack
+QUIT
+
+put 'repl' + 1 into 'repl'
+endwhile
+
+END
+"""
+
+        self.input_trj_rescore = """
+
+write file -
+"%s" verbose 1 -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics nb12softcore umax %s consolv agbnp2
+    weight constraints buffer %s
+    weight bind rxid 0 nrep %d %s
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+put 0 into 'repl'
+while 'repl' lt %d
+
+put $q$ concat (char 'repl') into 'bs3'
+put 'bs3' concat $.trj$ into 'trjname'
+
+show 'trjname'
+
+TABLE
+traj nfile 1 maxrec 50000000 nskip 1 delt 0.001 -
+coordinates rxid every 1 -
+traj fnames external file -
+'trjname'
+starttrack
+QUIT
+
+reset 'current.rxid'
+
+show 'repl'
+show 'current.rxid'
+
+if 'current.rxid' eq %d
+MINIMIZE
+   conjugate dx0 5.000000e-02 dxm 1.000000e+00
+   input cntl mxcyc 0 rmscut 1.000000e-02 deltae 1.000000e-07
+   run
+QUIT
+endif
+
+TABLE
+stoptrack
+QUIT
+
+put 'repl' + 1 into 'repl'
+endwhile
+
+END
+"""
+
+#
+# Impact input file templates for academic
+#
+    def setupTemplatesWCG(self):
+        """ Setup templates for input files for academic impact"""
+        self.input_cms =  """
+task {
+  task = "desmond:auto"
+}
+
+build_geometry {
+  box = {
+     shape = "orthorhombic"
+     size = [10.0 10.0 10.0 ]
+     size_type = "absolute"
+  }
+  neutralize_system = false
+  rezero_system = false
+  solvate_system = false
+}
+
+assign_forcefield {
+}
+
+"""  
+        self.input_agbnp2 =  """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics consolv agbnp2
+    weight constraints buffer 25.000000
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINIMIZE
+  input cntl mxcyc 0  rmscut 0.05 deltae 1.0e-05
+  conjugate dx0 0.05 dxm 1.0
+  run
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
+QUIT
+
+END
+"""
+        self.input_idx =  """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics consolv agbnp2
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINIMIZE
+  input cntl mxcyc 0  rmscut 0.05 deltae 1.0e-05
+  conjugate dx0 0.05 dxm 1.0
+  run
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
+QUIT
+
+END
+"""
+        self.input_mintherm = """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics consolv agbnp2
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy rest domain cmdist kdist %s dist0 %s toldist %s -
+      read file "%s"
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINIMIZE
+  conjugate dx0 5.000000e-02 dxm 1.000000e+00
+  input cntl mxcyc 200 rmscut 1.000000e-02 deltae 1.000000e-07
+  run
+QUIT
+
+put 100 into 'temp0'
+put %s into 'tempt'
+put 10 into 'n'
+put 'tempt'- 'temp0' into 'dtemp'
+put 'dtemp' / 'n' into 'dt'
+
+put 0 into 'i'
+while 'i' lt 'n'
+
+DYNAMICS
+  input cntl nstep 1000 delt 0.0005
+  input cntl constant totalenergy
+  input cntl initialize temperature at 'temp0'
+  input cntl nprnt 100
+  input cntl tol 1.00000e-07
+  input cntl stop rotations
+  input cntl statistics off
+  run rrespa fast 8
+QUIT
+
+put 'temp0' + 'dt' into 'temp0'
+put 'i' + 1 into 'i'
+
+endwhile
+
+DYNAMICS
+  write restart coordinates formatted file "%s"  
+  write sqldb file "%s"
+QUIT
+
+END
+"""
+        self.input_remd = """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics nb12softcore umax %s %s consolv agbnp2
+    weight constraints buffer %s
+    weight bind rxid 0 nrep %d %s
+%s
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy rest domain cmdist kdist %s dist0 %s toldist %s -
+      read file "%s"
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINI
+  read restart coordinates formatted file "%s"
+QUIT
+
+DYNAMICS
+  input cntl nstep %s delt 0.001
+  input cntl constant temperature langevin relax 10.0
+  input target temperature %s
+  input cntl initialize temperature at %s
+  input cntl nprnt %s
+  input cntl tol 1.00000e-07
+  input cntl statistics off
+  run rrespa fast 4
+QUIT
+
+DYNAMICS
+  input cntl nstep %s delt 0.001
+  input cntl constant temperature langevin relax 1.0
+  input target temperature %s
+  input cntl initialize temperature at %s
+  input cntl nprnt %s
+  input cntl tol 1.00000e-07
+  input cntl statistics off
+  write trajectory coordinates every %s -
+      external file "%s"
+  run rrespa fast 4
+  write restart coordinates formatted file "%s"  
+  write sqldb file -
+   "%s"
+QUIT
+
+END
+"""
+
+        self.input_remd_restart = """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics nb12softcore umax %s %s consolv agbnp2
+    weight constraints buffer %s
+    weight bind rxid 0 nrep %d %s
+%s
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy rest domain cmdist kdist %s dist0 %s toldist %s -
+      read file "%s"
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+DYNAMICS
+  input cntl nstep %s delt 0.001
+  input cntl constant temperature langevin relax 1.0
+  input target temperature %s
+  input cntl initialize temperature at %s
+  input cntl nprnt %s
+  input cntl tol 1.00000e-07
+  input cntl statistics off
+  read restart coordinates formatted file "%s"
+  write trajectory coordinates every %s -
+      external file "%s"
+  run rrespa fast 4
+  write restart coordinates formatted file "%s"  
+  write sqldb file -
+   "%s"
+QUIT
+
+END
+"""
+
+
+
+        self.input_reservoir = """ -
+    l0reservoir nreservoir %s resvrxid 0 -
+    traj nfile 2 maxrec %s nskip 1 delt 0.001 -
+    coordinates temperature every 1 -
+    traj fnames external file "%s" -
+                         file "%s" -
+    cmrestraints """
+
+  
+        self.input_trj = """
+
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics nb12softcore umax %s consolv agbnp2
+    weight constraints buffer %s
+    weight bind rxid 0 nrep %d %s
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+put 0 into 'repl'
+while 'repl' lt %d
+
+put $q$ concat (char 'repl') into 'bs3'
+put 'bs3' concat $.trj$ into 'trjname'
+
+show 'trjname'
+
+TABLE
+traj nfile 1 maxrec 50000000 nskip 1 delt 0.001 -
+coordinates every 1 -
+traj fnames external file -
+'trjname'
+starttrack
+QUIT
+
+reset 'current.rxid'
+
+show 'repl'
+show 'current.rxid'
+
+put $q$ concat (char 'current.rxid') into 'ms3'
+put 'ms3' concat $.maegz$ into 'maename'
+
+MINIMIZE
+   conjugate dx0 5.000000e-02 dxm 1.000000e+00
+   input cntl mxcyc 0 rmscut 1.000000e-02 deltae 1.000000e-07
+   run
+   write maestro file 'maename' append
+QUIT
+
+TABLE
+stoptrack
+QUIT
+
+put 'repl' + 1 into 'repl'
+endwhile
+
+END
+"""
+
+        self.input_trj_rescore = """
+
+write file -
+"%s" verbose 1 -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+  build primary name species2 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics nb12softcore umax %s consolv agbnp2
+    weight constraints buffer %s
+    weight bind rxid 0 nrep %d %s
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12 hmass 5
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+put 0 into 'repl'
+while 'repl' lt %d
+
+put $q$ concat (char 'repl') into 'bs3'
+put 'bs3' concat $.trj$ into 'trjname'
+
+show 'trjname'
+
+TABLE
+traj nfile 1 maxrec 50000000 nskip 1 delt 0.001 -
+coordinates every 1 -
+traj fnames external file -
+'trjname'
+starttrack
+QUIT
+
+reset 'current.rxid'
+
+show 'repl'
+show 'current.rxid'
+
+if 'current.rxid' eq %d
+MINIMIZE
+   conjugate dx0 5.000000e-02 dxm 1.000000e+00
+   input cntl mxcyc 0 rmscut 1.000000e-02 deltae 1.000000e-07
+   run
+QUIT
+endif
+
+TABLE
+stoptrack
+QUIT
+
+put 'repl' + 1 into 'repl'
+endwhile
+
+END
+"""
 
 #
 # runs Impact on the input mae files to get versions with internal 
@@ -498,6 +1409,115 @@ END
         if not os.path.exists(out_receptor_file) or not os.path.exists(out_ligand_file):
             print " failed"
             msg = "Impact job to analyze structure files failed"
+            self.exit(msg)
+        self.recidxfile = out_receptor_file
+        self.ligidxfile = out_ligand_file
+
+#
+# runs desmond utils from commercial schrodinger package on the input mae files to get versions with internal 
+# atom indexes
+#
+    def getDesmondDMSFiles(self):
+ 
+        receptor_file =  self.keywords.get('RECEPTOR_FILE')
+        if not receptor_file:
+            msg = "bedam_prep: No receptor file specified in the input file"
+            self.exit(msg)
+        if not os.path.exists(receptor_file):
+            msg = 'File does not exist: %s' % receptor_file
+            self.exit(msg)
+        ligand_file =  self.keywords.get('LIGAND_FILE')
+        if not ligand_file:
+            msg = "bedam_prep: No ligand file specified in the input file"
+            self.exit(msg)
+        if not os.path.exists(ligand_file):
+            msg = 'File does not exist: %s' % ligand_file
+            self.exit(msg)
+        com_shrod_source =  self.keywords.get('COMMERCIAL_SCHRODINGER_EVN')
+        if not com_shrod_source:
+            msg = "bedam_prep: No commerical shrodinger source file specified in the input file"
+            self.exit(msg)
+
+        print "Convert maegz files to cms files "
+        desmond_builder_file = 'des_builder.msj'
+        rcpt_cms_file = self.jobname + '_rcpt-out.cms'
+        lig_cms_file = self.jobname + '_lig-out.cms'
+        f = open(desmond_builder_file, 'w')
+        input =  self.input_cms
+        f.write(input)
+        f.close()
+        source_cmd = 'source ' + com_shrod_source
+        rcpt_cmd = '$SCHRODINGER/utilities/multisim' + ' -JOBNAME ' + self.jobname + ' -m ' + desmond_builder_file + ' ' + receptor_file + ' -o ' + rcpt_cms_file + ' -HOST localhost -maxjob 1 -WAIT'
+        lig_cmd =  '$SCHRODINGER/utilities/multisim' + ' -JOBNAME ' + self.jobname + ' -m ' + desmond_builder_file + ' ' + ligand_file + ' -o ' + lig_cms_file + ' -HOST localhost -maxjob 1 -WAIT' 
+        # os.system(source_cmd)
+        # os.system(rcpt_cmd)
+        # os.system(lig_cmd)
+        cms_cmd = source_cmd + ";" + rcpt_cmd + ";" + lig_cmd 
+        os.system(cms_cmd)
+
+        print "Convert cms files to dms files"
+        rcpt_dms_file = self.jobname + '_rcpt-out.dms'
+        lig_dms_file = self.jobname + '_lig-out.dms'
+	rcpt_cmd = '$SCHRODINGER/run -FROM desmond mae2dms ' + rcpt_cms_file + ' ' + rcpt_dms_file
+        lig_cmd = '$SCHRODINGER/run -FROM desmond mae2dms ' + lig_cms_file + ' ' + lig_dms_file
+        # os.system(source_cmd)
+        # os.system(rcpt_cmd)
+        # os.system(lig_cmd)
+        dms_cmd = source_cmd + ";" + rcpt_cmd + ";" + lig_cmd
+        os.system(dms_cmd)
+
+        print "add agbnp parameters into dms files"
+        agbnp_shrod_source =  self.keywords.get('AGBNP_IMPACT_EVN')
+        if not agbnp_shrod_source:
+            msg = "bedam_prep: No commercial IMPACT source file for agbnp specified in the input file"
+            self.exit(msg) 
+        agbnp_input_file =   self.jobname + '_agbnp' + '.inp'
+        agbnp_output_file =  self.jobname + '_agbnp' + '.out'
+        agbnp_jobtitle =     self.jobname + '_agbnp'
+        agbnp_receptor_file =   self.jobname + '_rcpt_agbnp' + '.dms'
+        agbnp_ligand_file =     self.jobname + '_lig_agbnp' + '.dms'
+        f = open(agbnp_input_file, 'w')
+        input =  self.input_agbnp2 % (agbnp_output_file, agbnp_jobtitle, rcpt_dms_file, lig_dms_file, agbnp_receptor_file, agbnp_ligand_file )
+        f.write(input)
+        f.close()
+        agbnp_log_file =  self.jobname + '_agbnp' + '.log'
+        source_cmd = 'source ' + agbnp_shrod_source 
+        # agbnp_cmd =  "$SCHRODINGER/impact -i " + agbnp_input_file  + " -WAIT -LOCAL "
+        agbnp_cmd =  "$IMPACT_EXEC/main1m " + agbnp_input_file  + " >& " + agbnp_log_file
+        # os.system(source_cmd)
+        # os.system(agbnp_cmd)
+        agbnp_cmd = source_cmd + ";" + agbnp_cmd
+        os.system(agbnp_cmd)
+        # time.sleep(120)
+        if not os.path.exists(agbnp_receptor_file) or not os.path.exists(agbnp_ligand_file):
+            print " failed"
+            msg = "Impact job to generate agbnp dms files failed"
+            self.exit(msg)
+
+        print "add internal atom indices into dms files"
+        acd_impact_source =  self.keywords.get('ACADEMIC_IMPACT_EVN')
+        if not acd_impact_source:
+            msg = "bedam_prep: No academic IMPACT source file specified in the input file"
+            self.exit(msg)
+        impact_input_file =   self.jobname + '_idx' + '.inp'
+        impact_output_file =  self.jobname + '_idx' + '.out'
+        impact_jobtitle =     self.jobname + '_idx'
+        out_receptor_file =   self.jobname + '_rcpt_idx' + '.dms'
+        out_ligand_file =     self.jobname + '_lig_idx' + '.dms'
+        f = open(impact_input_file, 'w')
+        input =  self.input_idx % (impact_output_file, impact_jobtitle, agbnp_receptor_file, agbnp_ligand_file, out_receptor_file, out_ligand_file )
+        f.write(input)
+        f.close()
+        idx_log_file =  self.jobname + '_idx' + '.log'
+        source_cmd = 'source ' + acd_impact_source
+        idx_cmd =  "$IMPACT_EXEC/main1m " + impact_input_file + " >& " + idx_log_file
+        # os.system(source_cmd)
+        # os.system(idx_cmd)
+        idx_cmd =  source_cmd + ";" + idx_cmd
+        os.system(idx_cmd)
+        if not os.path.exists(out_receptor_file) or not os.path.exists(out_ligand_file):
+            print " failed"
+            msg = "Impact job to generate dms files with idx failed"
             self.exit(msg)
         self.recidxfile = out_receptor_file
         self.ligidxfile = out_ligand_file
@@ -583,9 +1603,87 @@ END
         f.close()
 
 #
+#  write the binding site restraint file *_cmrestraint.dat 
+#
+    def writeRestraintFileFromDMS(self):
+        # check that structure files with internal indexes have been generated
+        if self.recidxfile is None or self.ligidxfile is None:
+            msg = "writeRestraintFile: Internal error: structure files not found"
+            self.exit(msg)             
+        receptor_sql =  self.keywords.get('REST_LIGAND_CMRECSQL')
+        if not receptor_sql:
+            msg = "bedam_prep: No sql selection specified for receptor site center"
+            self.exit(msg)
+
+        ligand_sql =  self.keywords.get('REST_LIGAND_CMLIGSQL')
+        if not ligand_sql:
+            ligand_sql = '( all)'
+        recpt_cmd = "SELECT id,x,y,z,i_i_internal_atom_index FROM particle WHERE " + receptor_sql
+ 
+        con = lite.connect(self.recidxfile)
+        with con:
+            cur = con.cursor()  
+            cur.execute(recpt_cmd)
+            rows = cur.fetchall()
+            if not rows:
+                msg = "bedam_prep: No atoms return from sql selection for receptor site center"
+                self.exit(msg) 
+            rec_atoms = []
+            cmrx = cmry = cmrz = 0. 
+            for row in rows:
+                cmrx += row[1]
+                cmry += row[2]
+                cmrz += row[3]
+                rec_atoms.append(row[4])
+            n=len(rows)
+            cmrx /= float(n)
+            cmry /= float(n)
+            cmrz /= float(n)
+
+        lig_cmd = "SELECT id,x,y,z,i_i_internal_atom_index FROM particle WHERE " + ligand_sql 
+        con = lite.connect(self.ligidxfile)
+        with con:
+            cur = con.cursor()  
+            cur.execute(lig_cmd)
+            rows = cur.fetchall()
+            if not rows:
+                msg = "bedam_prep: No atoms return from sql selection for ligand site center"
+                self.exit(msg) 
+            lig_atoms = []
+            cmlx = cmly = cmlz = 0. 
+            for row in rows:
+                cmlx += row[1]
+                cmly += row[2]
+                cmlz += row[3]
+                lig_atoms.append(row[4])
+            n=len(rows)
+            cmlx /= float(n)
+            cmly /= float(n)
+            cmlz /= float(n)  
+
+        #computes and reports the distance btw CM's
+        d = sqrt((cmlx - cmrx)*(cmlx - cmrx) + (cmly - cmry)*(cmly - cmry) + (cmlz - cmrz)*(cmlz - cmrz))
+        print "CM-CM distance = %f" % d
+
+        self.restraint_file = self.jobname + '_cmrestraint.dat'
+        f = open(self.restraint_file,"w")
+        f.write("Receptor\n")
+        f.write("%d\n" % 1)
+        f.write("%d\n" % len(rec_atoms) )
+        for i in rec_atoms:
+            f.write("%d\n" % i)
+        f.write("Ligand\n")
+        f.write("%d\n" % 2)
+        f.write("%d\n" % len(lig_atoms) )
+        for i in lig_atoms:
+            f.write("%d\n" % i)
+        f.close()
+
+
+#
 # writes receptor mae file with restraints
 #
-    def writeRecStructureFile(self):
+    def writeRecStructureFile(self): 
         receptor_file =  self.keywords.get('RECEPTOR_FILE')
         if not receptor_file:
             msg = "bedam_prep: No receptor file specified in the input file"
@@ -615,6 +1713,63 @@ END
         receptor_file_restr =   self.jobname + '_rcpt_restr' + '.maegz'
         st.write(receptor_file_restr)
         self.receptor_file_restr = receptor_file_restr
+        self.ligand_file_restr = self.ligidxfile
+#
+# writes receptor dms file with restraints
+#
+    def writeRecStructureDMSFile(self):
+        if self.recidxfile is None :
+            msg = "writeRecStructureDMSFile: Internal error: Structure file not found"
+            self.exit(msg)            
+        if not os.path.exists(self.recidxfile):
+            msg = 'File does not exist: %s' % self.recidxfile
+            self.exit(msg)
+
+        rest_sql =  self.keywords.get('REST_RECEPTOR_SQL')
+        if rest_sql is not None: 
+            con = lite.connect(self.recidxfile)
+            recpt_cmd = "PRAGMA table_info(particle)";
+            columnExists = False; 
+            with con:
+                cur = con.cursor()  
+                cur.execute(recpt_cmd)
+                rows = cur.fetchall()
+                for row in rows:
+                    if row[1] == "grp_buffer" : 
+                        columnExists = True
+                if not columnExists : 
+                    cur.execute("ALTER TABLE particle ADD COLUMN grp_buffer int DEFAULT(0);")
+                recpt_cmd = "SELECT id FROM particle WHERE " + rest_sql
+                cur.execute(recpt_cmd)
+                atoms = cur.fetchall()      
+                for iat in atoms:
+                    cur.execute("UPDATE particle SET grp_buffer=? WHERE Id=?", (2, iat[0]))
+ 
+        froz_sql =  self.keywords.get('FROZ_RECEPTOR_SQL')
+        if froz_sql is not None: 
+            con = lite.connect(self.recidxfile)
+            recpt_cmd = "PRAGMA table_info(particle)";
+            columnExists = False; 
+            with con:
+                cur = con.cursor()  
+                cur.execute(recpt_cmd)
+                rows = cur.fetchall()
+                for row in rows:
+                    if row[1] == "grp_frozen" : 
+                        columnExists = True
+                if not columnExists : 
+                    cur.execute("ALTER TABLE particle ADD COLUMN grp_frozen int DEFAULT(0);")
+                recpt_cmd = "SELECT id FROM particle WHERE " + froz_sql
+                cur.execute(recpt_cmd)
+                atoms = cur.fetchall()      
+                for iat in atoms:
+                    cur.execute("UPDATE particle SET grp_frozen=? WHERE Id=?", (1, iat[0]))
+
+        receptor_file_restr =   self.jobname + '_rcpt_restr' + '.dms'
+        cpcmd = "cp " +  self.recidxfile + "  " + receptor_file_restr 
+        os.system(cpcmd)
+        self.receptor_file_restr = receptor_file_restr
+        self.ligand_file_restr = self.ligidxfile
 
 #
 # writes the Impact input file for minimization/thermalization
@@ -626,13 +1781,13 @@ END
         if not os.path.exists(self.receptor_file_restr):
             msg = 'File does not exist: %s' % self.receptor_file_restr
             self.exit(msg)
-        ligand_file =  self.keywords.get('LIGAND_FILE')
-        if not ligand_file:
-            msg = "bedam_prep: No ligand file specified in the input file"
+        if self.ligand_file_restr is None:
+            msg = "writeThermInputFile: No ligand file specified in the input file"
             self.exit(msg)
-        if not os.path.exists(ligand_file):
-            msg = 'File does not exist: %s' % ligand_file
+        if not os.path.exists(self.ligand_file_restr):
+            msg = 'File does not exist: %s' % self.ligand_file_restr
             self.exit(msg)
+
         kfcm =  self.keywords.get('REST_LIGAND_CMKF')
         if not kfcm:
             kfcm = '3.0'
@@ -657,10 +1812,16 @@ END
         impact_output_file =  self.jobname + '_mintherm' + '.out'
         impact_jobtitle =     self.jobname + '_mintherm'
         out_restart_file =    self.jobname + '_mintherm' + '.rst'
-        out_structure_file =  self.jobname + '_mintherm' + '.maegz'
         self.mintherm_out_restart_file = out_restart_file 
-
-        input = self.input_mintherm % (impact_output_file, impact_jobtitle, self.receptor_file_restr , ligand_file, kfcm, d0cm, tolcm, self.restraint_file, temperature, out_restart_file, out_structure_file)
+        if self.impact_package == "commercial" :
+            out_structure_file =  self.jobname + '_mintherm' + '.maegz'
+        elif (self.impact_package == "academic" or self.impact_package == "wcg") :
+            out_structure_file =  self.jobname + '_mintherm' + '.dms'
+        else:
+            msg = "bedam_prep: The specified impact package is not valid"
+            self.exit(msg)
+            
+        input = self.input_mintherm % (impact_output_file, impact_jobtitle, self.receptor_file_restr,self.ligand_file_restr, kfcm, d0cm, tolcm, self.restraint_file, temperature, out_restart_file, out_structure_file)
         f = open(impact_input_file, "w")
         f.write(input)
         f.close
@@ -701,12 +1862,11 @@ END
         if not os.path.exists(self.receptor_file_restr):
             msg = 'File does not exist: %s' % self.receptor_file_restr
             self.exit(msg)
-        ligand_file =  self.keywords.get('LIGAND_FILE')
-        if not ligand_file:
-            msg = "bedam_prep: No ligand file specified in the input file"
+        if self.ligand_file_restr is None:
+            msg = "writeRemdInputFile: No ligand file specified in the input file"
             self.exit(msg)
-        if not os.path.exists(ligand_file):
-            msg = 'File does not exist: %s' % ligand_file
+        if not os.path.exists(self.ligand_file_restr):
+            msg = 'File does not exist: %s' % self.ligand_file_restr
             self.exit(msg)
         umax = self.keywords.get('UMAX')
         if not umax:
@@ -805,42 +1965,87 @@ END
                 for i in range(0,nlambdas):
                     bias_parameters = bias_parameters + "-\n      auxp1 %s auxp2 %s " % (self.qb_fcs[i],self.qb_bepos[i])
 
-        impact_input_file =   self.jobname + '_remd' + '.inp'
-        impact_output_file =  self.jobname + '_remd' + '.out'
-        impact_jobtitle =     self.jobname + '_remd'
-        out_trajectory_file = self.jobname + '_remd' + '.trj'
-        out_restart_file =    self.jobname + '_remd' + '.rst'
-        out_structure_file =  self.jobname + '_remd' + '.maegz'
+        if self.impact_package == "wcg" :
+            for i in range (0, nlambdas):
+                lambda_list =  "-\n      lambda %s " % lambdas[i]
+                impact_input_file =   self.jobname + '_remd_' + str(i) + '.inp'
+                impact_output_file =  self.jobname + '_remd_' + str(i) + '.out'
+                impact_jobtitle =     self.jobname + '_remd_' + str(i)
+                out_trajectory_file = self.jobname + '_remd_' + str(i) + '.trj'
+                out_restart_file =    self.jobname + '_remd_' + str(i) + '.rst'
+                out_structure_file =  self.jobname + '_remd_' + str(i) + '.dms'
+                if not restart_file:
+                    input = self.input_remd % (impact_output_file, impact_jobtitle, 
+                                               self.receptor_file_restr , self.ligand_file_restr,
+                                               umax, bias_flag,
+                                               rest_kf, 1, lambda_list,
+                                               bias_parameters,
+                                               kfcm, d0cm, tolcm, self.restraint_file, 
+                                               self.mintherm_out_restart_file,
+                                               nmd_eq, temperature, temperature, nprnt,
+                                               nmd_prod,
+                                               temperature, temperature, nprnt,
+                                               ntrj, out_trajectory_file, out_restart_file, out_structure_file)
+                else:
+                    input = self.input_remd_restart % (impact_output_file, impact_jobtitle, 
+                                                       self.receptor_file_restr , self.ligand_file_restr,
+                                                       umax, bias_flag,
+                                                       rest_kf, 1, lambda_list,
+                                                       bias_parameters,
+                                                       kfcm, d0cm, tolcm, self.restraint_file, 
+                                                       nmd_prod,
+                                                       temperature, temperature, nprnt,
+                                                       restart_file,
+                                                       ntrj, out_trajectory_file, 
+                                                       out_restart_file, out_structure_file)
 
+                f = open(impact_input_file, "w")
+                f.write(input)
+                f.close
+ 
+            
+        else :
+            impact_input_file =   self.jobname + '_remd' + '.inp'
+            impact_output_file =  self.jobname + '_remd' + '.out'
+            impact_jobtitle =     self.jobname + '_remd'
+            out_trajectory_file = self.jobname + '_remd' + '.trj'
+            out_restart_file =    self.jobname + '_remd' + '.rst'
 
-        if not restart_file:
-            input = self.input_remd % (impact_output_file, impact_jobtitle, 
-                                   self.receptor_file_restr , ligand_file,
-                                   umax, bias_flag,
-                                   rest_kf, nlambdas, lambda_list,
-                                   bias_parameters,
-                                   kfcm, d0cm, tolcm, self.restraint_file, 
-                                   self.mintherm_out_restart_file,
-                                   nmd_eq, nlambdas, nmd_eq, temperature, temperature, nprnt,
-                                   nmd_prod, nlambdas, rsvr_command,
-                                   temperature, temperature, nprnt,
-                                   ntrj, out_trajectory_file, out_restart_file, out_structure_file)
-        else:
-            input = self.input_remd_restart % (impact_output_file, impact_jobtitle, 
-                                   self.receptor_file_restr , ligand_file,
-                                   umax, bias_flag,
-                                   rest_kf, nlambdas, lambda_list,
-                                   bias_parameters,
-                                   kfcm, d0cm, tolcm, self.restraint_file, 
-                                   nmd_prod, nlambdas, rsvr_command,
-                                   temperature, temperature, nprnt,
-                                   restart_file,
-                                   ntrj, out_trajectory_file, 
-                                   out_restart_file, out_structure_file)
-
-        f = open(impact_input_file, "w")
-        f.write(input)
-        f.close
+            if self.impact_package == "commercial" :
+                out_structure_file =  self.jobname + '_remd' + '.maegz'
+            elif self.impact_package == "academic" :
+                out_structure_file =  self.jobname + '_remd' + '.dms'
+            else:
+                msg = "bedam_prep: The specified impact package is not valid"
+                self.exit(msg)
+            if not restart_file:
+                input = self.input_remd % (impact_output_file, impact_jobtitle, 
+                                           self.receptor_file_restr , self.ligand_file_restr,
+                                           umax, bias_flag,
+                                           rest_kf, nlambdas, lambda_list,
+                                           bias_parameters,
+                                           kfcm, d0cm, tolcm, self.restraint_file, 
+                                           self.mintherm_out_restart_file,
+                                           nmd_eq, nlambdas, nmd_eq, temperature, temperature, nprnt,
+                                           nmd_prod, nlambdas, rsvr_command,
+                                           temperature, temperature, nprnt,
+                                           ntrj, out_trajectory_file, out_restart_file, out_structure_file)
+            else:
+                input = self.input_remd_restart % (impact_output_file, impact_jobtitle, 
+                                                   self.receptor_file_restr , self.ligand_file_restr,
+                                                   umax, bias_flag,
+                                                   rest_kf, nlambdas, lambda_list,
+                                                   bias_parameters,
+                                                   kfcm, d0cm, tolcm, self.restraint_file, 
+                                                   nmd_prod, nlambdas, rsvr_command,
+                                                   temperature, temperature, nprnt,
+                                                   restart_file,
+                                                   ntrj, out_trajectory_file, 
+                                                   out_restart_file, out_structure_file)
+                
+            f = open(impact_input_file, "w")
+            f.write(input)
+            f.close
 
 
 
@@ -854,13 +2059,13 @@ END
         if not os.path.exists(self.receptor_file_restr):
             msg = 'File does not exist: %s' % self.receptor_file_restr
             self.exit(msg)
-        ligand_file =  self.keywords.get('LIGAND_FILE')
-        if not ligand_file:
-            msg = "bedam_prep: No ligand file specified in the input file"
+        if self.ligand_file_restr is None:
+            msg = "writeReadTrajInputFile: No ligand file specified in the input file"
             self.exit(msg)
-        if not os.path.exists(ligand_file):
-            msg = 'File does not exist: %s' % ligand_file
-            self.exit(msg)
+        if not os.path.exists(self.ligand_file_restr):
+            msg = 'File does not exist: %s' % self.ligand_file_restr
+            self.exit(msg)    
+
         umax = self.keywords.get('UMAX')
         if not umax:
             umax = '1000.0'
@@ -898,7 +2103,7 @@ END
             i += 1
 
         input = self.input_trj % (impact_output_file, impact_jobtitle, 
-                                   self.receptor_file_restr , ligand_file, 
+                                   self.receptor_file_restr , self.ligand_file_restr, 
                                   umax,
                                    rest_kf, nlambdas, lambda_list, 
                                    nlambdas)
@@ -911,7 +2116,7 @@ END
         impact_output_file =  self.jobname + '_readtraj_rescore' + '.out'
         impact_jobtitle =     self.jobname + '_readtraj_rescore'
         input = self.input_trj_rescore % (impact_output_file, impact_jobtitle, 
-                                   self.receptor_file_restr , ligand_file, 
+                                   self.receptor_file_restr , self.ligand_file_restr, 
                                   umax,
                                    rest_kf, nlambdas, lambda_list, 
                                    nlambdas,nlambdas-1)
@@ -1243,10 +2448,6 @@ END
             for info in self.bias_info_bysim[k]:             
                 f.write("%f %f %f %f\n" % (info["temperature"],info["total_energy"],info["lambda"],info["binding_energy"]))
             f.close 
-
-
-
-
 
 
 
