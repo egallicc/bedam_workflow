@@ -3,9 +3,9 @@
 #PBS -o BEDAM_remd.log
 #PBS -e BEDAM_remd.err
 #PBS -A cst-levy
-#PBS -q devel
+#PBS -q legacy
 #PBS -r n
-#PBS -l nodes=4:ppn=8 -l walltime=12:00:00
+#PBS -l nodes=4:ppn=8 -l walltime=24:00:00
 
 # 16 replicas on 4X8 cores, 
 PPN=8

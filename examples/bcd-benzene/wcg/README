@@ -13,7 +13,7 @@
 
     source /home/tuf29141/set_schrodinger_env.2013-3.bashrc
 
-    $SCHRODINGER/run ~/software/bedam_workflow/bedam_prep.py bcd-benzene.cntl >& bedam_prep.log
+    $SCHRODINGER/run /home/tuf29141/software/bedam_workflow/bedam_prep.py bcd-benzene.cntl >& bedam_prep.log
 
 
 3) prepare bcd-benzene_mintherm.qsub

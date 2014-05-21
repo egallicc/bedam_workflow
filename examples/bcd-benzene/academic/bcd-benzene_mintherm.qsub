@@ -5,7 +5,7 @@
 #PBS -A cst-levy
 #PBS -q legacy
 #PBS -r n
-#PBS -l nodes=1:ppn=1 -l walltime=00:24:00
+#PBS -l nodes=1:ppn=1 -l walltime=24:00:00
 
 PPN=1
 export OMP_NUM_THREADS=1

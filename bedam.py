@@ -121,6 +121,9 @@ SETMODEL
 QUIT
 
 MINIMIZE
+  input cntl mxcyc 0  rmscut 0.05 deltae 1.0e-05
+  conjugate dx0 0.05 dxm 1.0
+  run
   write maestro name species1 file "%s"
   write maestro name species2 file "%s"
 QUIT
@@ -544,6 +547,42 @@ MINIMIZE
   run
   write sql name species1 file "%s"
   write sql name species2 file "%s"
+QUIT
+
+END
+"""
+        self.input_agbnp2_sep =  """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics consolv agbnp2
+    weight constraints buffer 25.000000
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINIMIZE
+  input cntl mxcyc 0  rmscut 0.05 deltae 1.0e-05
+  conjugate dx0 0.05 dxm 1.0
+  run
+  write sql name species1 file "%s"
 QUIT
 
 END
@@ -997,6 +1036,42 @@ QUIT
 
 END
 """
+        self.input_agbnp2_sep =  """
+write file -
+"%s" -
+      title -
+"%s" *
+
+CREATE
+  build primary name species1 type auto read sqldb file -
+"%s"
+QUIT
+
+SETMODEL
+  setpotential
+    mmechanics consolv agbnp2
+    weight constraints buffer 25.000000
+  quit
+  read parm file -
+"paramstd.dat" -
+  noprint
+  energy parm dielectric 1 nodist -
+   listupdate 10 -
+    cutoff 12
+  energy rescutoff byatom all
+  zonecons auto
+  energy constraints bonds hydrogens
+QUIT
+
+MINIMIZE
+  input cntl mxcyc 0  rmscut 0.05 deltae 1.0e-05
+  conjugate dx0 0.05 dxm 1.0
+  run
+  write sql name species1 file "%s"
+QUIT
+
+END
+"""
         self.input_idx =  """
 write file -
 "%s" -
@@ -1404,7 +1479,7 @@ END
         input =  self.input_idx % (impact_output_file, impact_jobtitle, receptor_file, ligand_file, out_receptor_file, out_ligand_file )
         f.write(input)
         f.close()
-        cmd = self.impact + " -i " + impact_input_file + " -WAIT"
+        cmd = self.impact + " -i " + impact_input_file + " -LOCAL -WAIT"
         os.system(cmd)
         if not os.path.exists(out_receptor_file) or not os.path.exists(out_ligand_file):
             print " failed"
@@ -1471,23 +1546,57 @@ END
         if not agbnp_shrod_source:
             msg = "bedam_prep: No commercial IMPACT source file for agbnp specified in the input file"
             self.exit(msg) 
-        agbnp_input_file =   self.jobname + '_agbnp' + '.inp'
-        agbnp_output_file =  self.jobname + '_agbnp' + '.out'
-        agbnp_jobtitle =     self.jobname + '_agbnp'
+
+        # # add agbnp parameters for receptor and ligand using the same input file  
+        # agbnp_input_file =   self.jobname + '_agbnp' + '.inp'
+        # agbnp_output_file =  self.jobname + '_agbnp' + '.out'
+        # agbnp_jobtitle =     self.jobname + '_agbnp'
+        # agbnp_receptor_file =   self.jobname + '_rcpt_agbnp' + '.dms'
+        # agbnp_ligand_file =     self.jobname + '_lig_agbnp' + '.dms'
+        # f = open(agbnp_input_file, 'w')
+        # input =  self.input_agbnp2 % (agbnp_output_file, agbnp_jobtitle, rcpt_dms_file, lig_dms_file, agbnp_receptor_file, agbnp_ligand_file )
+        # f.write(input)
+        # f.close()
+        # agbnp_log_file =  self.jobname + '_agbnp' + '.log'
+        # source_cmd = 'source ' + agbnp_shrod_source 
+        # # agbnp_cmd =  "$SCHRODINGER/impact -i " + agbnp_input_file  + " -WAIT -LOCAL "
+        # agbnp_cmd =  "$IMPACT_EXEC/main1m " + agbnp_input_file  + " >& " + agbnp_log_file
+        # # os.system(source_cmd)
+        # # os.system(agbnp_cmd)
+        # agbnp_cmd = source_cmd + ";" + agbnp_cmd
+        # os.system(agbnp_cmd)
+
+        # 
+        agbnp_input_file =   self.jobname + '_rcpt_agbnp' + '.inp'
+        agbnp_output_file =  self.jobname + '_rcpt_agbnp' + '.out'
+        agbnp_jobtitle =     self.jobname + '_rcpt_agbnp'
         agbnp_receptor_file =   self.jobname + '_rcpt_agbnp' + '.dms'
-        agbnp_ligand_file =     self.jobname + '_lig_agbnp' + '.dms'
         f = open(agbnp_input_file, 'w')
-        input =  self.input_agbnp2 % (agbnp_output_file, agbnp_jobtitle, rcpt_dms_file, lig_dms_file, agbnp_receptor_file, agbnp_ligand_file )
+        input =  self.input_agbnp2_sep % (agbnp_output_file, agbnp_jobtitle, rcpt_dms_file, agbnp_receptor_file)
         f.write(input)
         f.close()
-        agbnp_log_file =  self.jobname + '_agbnp' + '.log'
+        agbnp_log_file =  self.jobname + '_rcpt_agbnp' + '.log'
         source_cmd = 'source ' + agbnp_shrod_source 
         # agbnp_cmd =  "$SCHRODINGER/impact -i " + agbnp_input_file  + " -WAIT -LOCAL "
         agbnp_cmd =  "$IMPACT_EXEC/main1m " + agbnp_input_file  + " >& " + agbnp_log_file
-        # os.system(source_cmd)
-        # os.system(agbnp_cmd)
         agbnp_cmd = source_cmd + ";" + agbnp_cmd
         os.system(agbnp_cmd)
+
+        agbnp_input_file =   self.jobname + '_lig_agbnp' + '.inp'
+        agbnp_output_file =  self.jobname + '_lig_agbnp' + '.out'
+        agbnp_jobtitle =     self.jobname + '_lig_agbnp'
+        agbnp_ligand_file =     self.jobname + '_lig_agbnp' + '.dms'
+        f = open(agbnp_input_file, 'w')
+        input =  self.input_agbnp2_sep % (agbnp_output_file, agbnp_jobtitle,lig_dms_file, agbnp_ligand_file )
+        f.write(input)
+        f.close()
+        agbnp_log_file =  self.jobname + '_lig_agbnp' + '.log'
+        source_cmd = 'source ' + agbnp_shrod_source 
+        # agbnp_cmd =  "$SCHRODINGER/impact -i " + agbnp_input_file  + " -WAIT -LOCAL "
+        agbnp_cmd =  "$IMPACT_EXEC/main1m " + agbnp_input_file  + " >& " + agbnp_log_file
+        agbnp_cmd = source_cmd + ";" + agbnp_cmd
+        os.system(agbnp_cmd)
+
         # time.sleep(120)
         if not os.path.exists(agbnp_receptor_file) or not os.path.exists(agbnp_ligand_file):
             print " failed"

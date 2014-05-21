@@ -21,7 +21,7 @@
    qsub bcd-benzene_remd.qsub
 
 5) run a script for analyzing the simulation data    
-   source ~/set_schrod.b3.bashrc
+   source /home/tuf29141/set_schrod.b3.bashrc
    $SCHRODINGER/run /home/tuf29141/software/bedam_workflow/bedam_analyze.py bcd-benzene.cntl >& bedam_analyze.log
 
 
