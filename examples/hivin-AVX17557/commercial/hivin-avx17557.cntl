@@ -1,0 +1,56 @@
+# IMPACT package from run simulation ( commerical, academic, wcg)
+IMPACT_PACKAGE 'commercial' 
+# environment source file to set the commercial schrodinger for preparing input files
+# COMMERCIAL_SCHRODINGER_EVN '/home/tuf29141/set_schrodinger_env.2013-3.bashrc'
+# enveroment source file to set commercial IMPACT for adding agbnp
+# AGBNP_IMPACT_EVN '/home/tuf29141/set_impact2014_proacademic.bashrc'
+# enveroment source file to set academic IMPACT for adding internal atom index
+# ACADEMIC_IMPACT_EVN '/home/tuf29141/set_academic_impact.bashrc' 
+#name of receptor .mae file
+RECEPTOR_FILE 'recptor_17557.mae'
+#name of ligand .mae file
+LIGAND_FILE 'ligand_17557.mae'
+#list of lambdas for each replica (16 replicas, in this case). 
+#lambda=0 is the decoupled state, lambda=1 is the coupled state.
+#The binding free energy is the free energy difference between the lambda=1
+#and lambda=0 states plus a standard state correction term.
+LAMBDAS '0.0,0.001,0.002,0.0033,0.0048,0.006,0.008,0.01,0.04,0.07,0.1,0.25,0.35,0.45,0.55,0.65,0.71,0.78,0.85,1.0'
+#the atoms of the receptor and ligand that define their centroids. 
+#These are given in ASL (atom selection language). A flat-bottom
+#harmonic restraint (see below) on the centroid-to-centroid distance defines
+#the binding site region and keeps the ligand and the receptor together at
+#small lambdas. For academic impact, we need use the selection rules from sqlite3. 
+REST_LIGAND_CMRECASL '(((res.num 168-174,178) AND (chain.name A)) OR ((res.num 95,96,98,99,102,125,128,129,132) AND (chain.name B))) AND ((atom.ptype " CA "))'
+REST_LIGAND_CMLIGASL  'not (( atom.ele H )  )'
+#REST_LIGAND_CMRECSQL 'name GLOB 'CA' AND ( ((resid >= 168 AND resid <= 174 OR resid = 178) AND chain='A') OR ((resid GLOB '9[5,6,8,9]' OR resid=102 OR resid = 125 OR resid = 128 OR resid = 129 OR resid = 132) AND chain='B') )'
+#REST_LIGAND_CMLIGSQL 'anum > 1'
+#parameters of the flat-bottom harmonic restraints between the centroids
+#defined above.
+# force constant in kcal/mol/A^2 of receptor-ligand restraints
+REST_LIGAND_CMKF 3.0
+# equilibrium distance in Angstroms of receptor-ligand restraint
+REST_LIGAND_CMDIST0 0.0
+# distance tolerance in Angstroms of receptor-ligand restraint
+REST_LIGAND_CMTOL 6.0
+#the atoms of the receptor that are harmonically restrained
+#for academic impact, we need use the selection rules from sqlite3.
+REST_RECEPTOR_ASL    '(atom.ptype " CA ") AND ( NOT (((res.num 167-178) AND (chain.name A)) OR ((res.num 95-102,124-132) AND (chain.name B))) ) AND ( NOT (res.num 52-57,209-212))'
+#FROZ_RECEPTOR_ASL ' '
+#REST_RECEPTOR_SQL 'name GLOB 'CA' AND ( NOT ((resid >= 167 AND resid <= 178 AND chain = 'A')  OR (resid>=95 AND resid<=102 AND chain = 'B') OR (resid >=124 AND resid<=132 and chain = 'B')  OR (resid >=52 AND resid <=57) OR (resid>=209 AND resid <=212)) )'
+
+#FROZ_RECEPTOR_SQL ' '
+# force constant of receptor atomic restraints in kcal/mol/A^2
+REST_RECEPTOR_KF 1.0
+#Temperature in K
+TEMPERATURE 300
+# number of equilibration MD steps
+EQUILIBRATION_STEPS 10000
+# number of production MD steps.
+PRODUCTION_STEPS 500000
+#Frequency of printing information in output file in number of steps. The number
+#of binding energy samples collected for each replica is
+#PRODUCTION_STEPS/PRNT_FREQUENCY = 500 in this case.
+#500 x 16replicas = 800 samples in total
+PRNT_FREQUENCY 100
+# Frequency of saving trajectory frames. 500 frames per replica.
+TRJ_FREQUENCY 100

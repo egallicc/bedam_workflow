@@ -1,0 +1,24 @@
+1) get the original mae files, use maestro to tranform the ligand to the binding site
+   and output to the files: ligand_17557.mae and recptor_17557.mae
+  
+
+2)  prepare the bedam inp files 
+
+    source /home/tuf29141/set_schrodinger_env.2013-3.bashrc
+
+    $SCHRODINGER/run /home/tuf29141/software/bedam_workflow/bedam_prep.py hivin-avx17557.cntl >& bedam_prep.log
+
+
+3) prepare hivin-avx17557_mintherm.qsub
+   run the minimization/thermalization calculation by 
+   qsub hivin-avx17557_mintherm.qsub
+
+3) prepare hivin-avx17557_remd.qsub
+   run bedam production simulation by
+   qsub hivin-avx17557_remd.qsub
+
+4) run a script to analyze simulation data  
+
+   source /home/tuf29141/set_schrodinger_env.2013-3.bashrc
+   $SCHRODINGER/run /home/tuf29141/software/bedam_workflow/bedam_analyze.py hivin-avx17557.cntl >& bedam_analyze.log & 
+ 
