@@ -1521,7 +1521,7 @@ END
         input =  self.input_cms
         f.write(input)
         f.close()
-        source_cmd = 'source ' + com_shrod_source
+        source_cmd = '. ' + com_shrod_source
         rcpt_cmd = '$SCHRODINGER/utilities/multisim' + ' -JOBNAME ' + self.jobname + ' -m ' + desmond_builder_file + ' ' + receptor_file + ' -o ' + rcpt_cms_file + ' -HOST localhost -maxjob 1 -WAIT'
         lig_cmd =  '$SCHRODINGER/utilities/multisim' + ' -JOBNAME ' + self.jobname + ' -m ' + desmond_builder_file + ' ' + ligand_file + ' -o ' + lig_cms_file + ' -HOST localhost -maxjob 1 -WAIT' 
         # os.system(source_cmd)
@@ -1576,9 +1576,9 @@ END
         f.write(input)
         f.close()
         agbnp_log_file =  self.jobname + '_rcpt_agbnp' + '.log'
-        source_cmd = 'source ' + agbnp_shrod_source 
+        source_cmd = '. ' + agbnp_shrod_source 
         # agbnp_cmd =  "$SCHRODINGER/impact -i " + agbnp_input_file  + " -WAIT -LOCAL "
-        agbnp_cmd =  "$IMPACT_EXEC/main1m " + agbnp_input_file  + " >& " + agbnp_log_file
+        agbnp_cmd =  "$IMPACT_EXEC/main1m " + agbnp_input_file  + " > " + agbnp_log_file + " 2>&1 "
         agbnp_cmd = source_cmd + ";" + agbnp_cmd
         os.system(agbnp_cmd)
 
@@ -1591,9 +1591,9 @@ END
         f.write(input)
         f.close()
         agbnp_log_file =  self.jobname + '_lig_agbnp' + '.log'
-        source_cmd = 'source ' + agbnp_shrod_source 
+        source_cmd = '. ' + agbnp_shrod_source 
         # agbnp_cmd =  "$SCHRODINGER/impact -i " + agbnp_input_file  + " -WAIT -LOCAL "
-        agbnp_cmd =  "$IMPACT_EXEC/main1m " + agbnp_input_file  + " >& " + agbnp_log_file
+        agbnp_cmd =  "$IMPACT_EXEC/main1m " + agbnp_input_file  + " > " + agbnp_log_file + " 2>&1 "
         agbnp_cmd = source_cmd + ";" + agbnp_cmd
         os.system(agbnp_cmd)
 
@@ -1618,8 +1618,8 @@ END
         f.write(input)
         f.close()
         idx_log_file =  self.jobname + '_idx' + '.log'
-        source_cmd = 'source ' + acd_impact_source
-        idx_cmd =  "$IMPACT_EXEC/main1m " + impact_input_file + " >& " + idx_log_file
+        source_cmd = '. ' + acd_impact_source
+        idx_cmd =  "$IMPACT_EXEC/main1m " + impact_input_file + " > " + idx_log_file + " 2>&1 "
         # os.system(source_cmd)
         # os.system(idx_cmd)
         idx_cmd =  source_cmd + ";" + idx_cmd
