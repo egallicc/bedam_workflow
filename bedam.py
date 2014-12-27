@@ -688,7 +688,8 @@ endwhile
 
 DYNAMICS
   write restart coordinates formatted file "%s"  
-  write sqldb file "%s"
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
 QUIT
 
 END
@@ -757,8 +758,8 @@ DYNAMICS
       external file "%s"
   run rrespa fast 4
   write restart coordinates rxid formatted file "%s"  
-  write sqldb file -
-   "%s"
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
 QUIT
 
 END
@@ -812,8 +813,8 @@ DYNAMICS
       external file "%s"
   run rrespa fast 4
   write restart coordinates rxid formatted file "%s"  
-  write sqldb file -
-   "%s"
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
 QUIT
 
 END
@@ -1173,7 +1174,8 @@ endwhile
 
 DYNAMICS
   write restart coordinates formatted file "%s"  
-  write sqldb file "%s"
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
 QUIT
 
 END
@@ -1238,8 +1240,8 @@ DYNAMICS
       external file "%s"
   run rrespa fast 4
   write restart coordinates formatted file "%s"  
-  write sqldb file -
-   "%s"
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
 QUIT
 
 END
@@ -1291,8 +1293,8 @@ DYNAMICS
       external file "%s"
   run rrespa fast 4
   write restart coordinates formatted file "%s"  
-  write sqldb file -
-   "%s"
+  write sql name species1 file "%s"
+  write sql name species2 file "%s"
 QUIT
 
 END
@@ -1924,13 +1926,15 @@ END
         self.mintherm_out_restart_file = out_restart_file 
         if self.impact_package == "commercial" :
             out_structure_file =  self.jobname + '_mintherm' + '.maegz'
+            input = self.input_mintherm % (impact_output_file, impact_jobtitle, self.receptor_file_restr,self.ligand_file_restr, kfcm, d0cm, tolcm, self.restraint_file, temperature, out_restart_file, out_structure_file)
         elif (self.impact_package == "academic" or self.impact_package == "wcg") :
-            out_structure_file =  self.jobname + '_mintherm' + '.dms'
+            out_rcpt_structure_file =  self.jobname + '_rcpt_mintherm' + '.dms'
+            out_lig_structure_file =  self.jobname + '_lig_mintherm' + '.dms'
+            input = self.input_mintherm % (impact_output_file, impact_jobtitle, self.receptor_file_restr,self.ligand_file_restr, kfcm, d0cm, tolcm, self.restraint_file, temperature, out_restart_file, out_rcpt_structure_file,out_lig_structure_file)
         else:
             msg = "bedam_prep: The specified impact package is not valid"
             self.exit(msg)
-            
-        input = self.input_mintherm % (impact_output_file, impact_jobtitle, self.receptor_file_restr,self.ligand_file_restr, kfcm, d0cm, tolcm, self.restraint_file, temperature, out_restart_file, out_structure_file)
+
         f = open(impact_input_file, "w")
         f.write(input)
         f.close
@@ -2082,7 +2086,8 @@ END
                 impact_jobtitle =     self.jobname + '_remd_' + str(i)
                 out_trajectory_file = self.jobname + '_remd_' + str(i) + '.trj'
                 out_restart_file =    self.jobname + '_remd_' + str(i) + '.rst'
-                out_structure_file =  self.jobname + '_remd_' + str(i) + '.dms'
+                out_rcpt_structure_file =  self.jobname + '_rcpt_remd_' + str(i) + '.dms'
+                out_lig_structure_file =  self.jobname + '_lig_remd_' + str(i) + '.dms'
                 if not restart_file:
                     input = self.input_remd % (impact_output_file, impact_jobtitle, 
                                                self.receptor_file_restr , self.ligand_file_restr,
@@ -2094,7 +2099,8 @@ END
                                                nmd_eq, temperature, temperature, nprnt,
                                                nmd_prod,
                                                temperature, temperature, nprnt,
-                                               ntrj, out_trajectory_file, out_restart_file, out_structure_file)
+                                               ntrj, out_trajectory_file, out_restart_file,
+                                               out_rcpt_structure_file, out_lig_structure_file)
                 else:
                     input = self.input_remd_restart % (impact_output_file, impact_jobtitle, 
                                                        self.receptor_file_restr , self.ligand_file_restr,
@@ -2105,8 +2111,8 @@ END
                                                        nmd_prod,
                                                        temperature, temperature, nprnt,
                                                        restart_file,
-                                                       ntrj, out_trajectory_file, 
-                                                       out_restart_file, out_structure_file)
+                                                       ntrj, out_trajectory_file, out_restart_file,
+                                                       out_rcpt_structure_file,out_lig_structure_file)
 
                 f = open(impact_input_file, "w")
                 f.write(input)
@@ -2122,35 +2128,61 @@ END
 
             if self.impact_package == "commercial" :
                 out_structure_file =  self.jobname + '_remd' + '.maegz'
+                if not restart_file:
+                    input = self.input_remd % (impact_output_file, impact_jobtitle, 
+                                               self.receptor_file_restr , self.ligand_file_restr,
+                                               umax, bias_flag,
+                                               rest_kf, nlambdas, lambda_list,
+                                               bias_parameters,
+                                               kfcm, d0cm, tolcm, self.restraint_file, 
+                                               self.mintherm_out_restart_file,
+                                               nmd_eq, nlambdas, nmd_eq, temperature, temperature, nprnt,
+                                               nmd_prod, nlambdas, rsvr_command,
+                                               temperature, temperature, nprnt,
+                                               ntrj, out_trajectory_file, out_restart_file, out_structure_file)
+                else:
+                    input = self.input_remd_restart % (impact_output_file, impact_jobtitle, 
+                                                       self.receptor_file_restr , self.ligand_file_restr,
+                                                       umax, bias_flag,
+                                                       rest_kf, nlambdas, lambda_list,
+                                                       bias_parameters,
+                                                       kfcm, d0cm, tolcm, self.restraint_file, 
+                                                       nmd_prod, nlambdas, rsvr_command,
+                                                       temperature, temperature, nprnt,
+                                                       restart_file,
+                                                       ntrj, out_trajectory_file, 
+                                                       out_restart_file, out_structure_file)
             elif self.impact_package == "academic" :
-                out_structure_file =  self.jobname + '_remd' + '.dms'
+                out_rcpt_structure_file =  self.jobname + '_rcpt_remd' + '.dms'
+                out_lig_structure_file =  self.jobname + '_lig_remd' + '.dms'
+                if not restart_file:
+                    input = self.input_remd % (impact_output_file, impact_jobtitle, 
+                                               self.receptor_file_restr , self.ligand_file_restr,
+                                               umax, bias_flag,
+                                               rest_kf, nlambdas, lambda_list,
+                                               bias_parameters,
+                                               kfcm, d0cm, tolcm, self.restraint_file, 
+                                               self.mintherm_out_restart_file,
+                                               nmd_eq, nlambdas, nmd_eq, temperature, temperature, nprnt,
+                                               nmd_prod, nlambdas, rsvr_command,
+                                               temperature, temperature, nprnt,
+                                               ntrj, out_trajectory_file, out_restart_file, 
+                                               out_rcpt_structure_file, out_lig_structure_file)
+                else:
+                    input = self.input_remd_restart % (impact_output_file, impact_jobtitle, 
+                                                       self.receptor_file_restr , self.ligand_file_restr,
+                                                       umax, bias_flag,
+                                                       rest_kf, nlambdas, lambda_list,
+                                                       bias_parameters,
+                                                       kfcm, d0cm, tolcm, self.restraint_file, 
+                                                       nmd_prod, nlambdas, rsvr_command,
+                                                       temperature, temperature, nprnt,
+                                                       restart_file,
+                                                       ntrj, out_trajectory_file, 
+                                                       out_restart_file, out_rcp_structure_file, out_lig_structure_file)
             else:
                 msg = "bedam_prep: The specified impact package is not valid"
                 self.exit(msg)
-            if not restart_file:
-                input = self.input_remd % (impact_output_file, impact_jobtitle, 
-                                           self.receptor_file_restr , self.ligand_file_restr,
-                                           umax, bias_flag,
-                                           rest_kf, nlambdas, lambda_list,
-                                           bias_parameters,
-                                           kfcm, d0cm, tolcm, self.restraint_file, 
-                                           self.mintherm_out_restart_file,
-                                           nmd_eq, nlambdas, nmd_eq, temperature, temperature, nprnt,
-                                           nmd_prod, nlambdas, rsvr_command,
-                                           temperature, temperature, nprnt,
-                                           ntrj, out_trajectory_file, out_restart_file, out_structure_file)
-            else:
-                input = self.input_remd_restart % (impact_output_file, impact_jobtitle, 
-                                                   self.receptor_file_restr , self.ligand_file_restr,
-                                                   umax, bias_flag,
-                                                   rest_kf, nlambdas, lambda_list,
-                                                   bias_parameters,
-                                                   kfcm, d0cm, tolcm, self.restraint_file, 
-                                                   nmd_prod, nlambdas, rsvr_command,
-                                                   temperature, temperature, nprnt,
-                                                   restart_file,
-                                                   ntrj, out_trajectory_file, 
-                                                   out_restart_file, out_structure_file)
                 
             f = open(impact_input_file, "w")
             f.write(input)
