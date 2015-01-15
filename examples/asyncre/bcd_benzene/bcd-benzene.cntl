@@ -1,0 +1,72 @@
+JOB_TRANSPORT 'SSH'
+RE_TYPE 'BEDAMTEMPT'
+#MULTIARCH 'YES'
+
+#BOINC_PROJECTDIR "/home/boincadm/projects/boincimpact"
+#BOINC_DATABASE "boincimpact"
+#BOINC_DATABASE_USER "boincadm"
+#BOINC_DATABASE_PASSWORD "boincadmpw"
+
+EXEC_DIRECTORY '/home/emilio/schrod/academic-impact'
+ENGINE_INPUT_EXTFILES  'agbnp2.param,paramstd.dat'
+
+TEMPERATURES '300,314,329,345,362,379,397,417'
+WALL_TIME 128800
+TOTAL_CORES 4
+SUBJOB_CORES 1
+VERBOSE "no"
+CYCLE_TIME 30
+SUBJOBS_BUFFER_SIZE 0.1
+
+# IMPACT package from run simulation ( commerical, academic, wcg)
+IMPACT_PACKAGE 'academic' 
+# environment source file to set the commercial schrodinger for preparing input files
+COMMERCIAL_SCHRODINGER_EVN '/home/emilio/tmp/bcd_benzene/set_schrodinger_env.2013-3.bashrc'
+# enviroment source file to set academic IMPACT for adding internal atom index
+ACADEMIC_IMPACT_EVN '/home/emilio/tmp/bcd_benzene/set_academic_impact.bashrc' 
+#name of receptor .mae file
+RECEPTOR_FILE 'bcd_recpt.maegz'
+#name of ligand .mae file
+LIGAND_FILE 'benzene_lig.maegz'
+#list of lambdas for each replica (16 replicas, in this case). 
+#lambda=0 is the decoupled state, lambda=1 is the coupled state.
+#The binding free energy is the free energy difference between the lambda=1
+#and lambda=0 states plus a standard state correction term.
+LAMBDAS '0.0,0.002,0.005,0.008,0.01,0.04,0.1,0.2,0.35,0.5,0.6,0.7,0.8,0.9,0.95,1.0'
+#the atoms of the receptor and ligand that define their centroids. 
+#These are given in ASL (atom selection language). A flat-bottom
+#harmonic restraint (see below) on the centroid-to-centroid distance defines
+#the binding site region and keeps the ligand and the receptor together at
+#small lambdas. For academic impact, we need use the selection rules from sqlite3. 
+# REST_LIGAND_CMRECASL '( all) AND NOT (( atom.ele H ) )'
+# REST_LIGAND_CMLIGASL '( all) AND NOT (( atom.ele H ) )'
+REST_LIGAND_CMRECSQL 'name GLOB 'C*' OR name GLOB 'O*''
+REST_LIGAND_CMLIGSQL 'name GLOB 'C*' OR name GLOB 'O*''
+#parameters of the flat-bottom harmonic restraints between the centroids
+#defined above.
+# force constant in kcal/mol/A^2 of receptor-ligand restraints
+REST_LIGAND_CMKF 3.0
+# equilibrium distance in Angstroms of receptor-ligand restraint
+REST_LIGAND_CMDIST0 0.0
+# distance tolerance in Angstroms of receptor-ligand restraint
+REST_LIGAND_CMTOL 6.0
+#the atoms of the receptor that are harmonically restrained
+#for academic impact, we need use the selection rules from sqlite3.
+#REST_RECEPTOR_ASL '(not (atom.num 3, 5, 10, 11, 14, 16, 21, 22, 25, 27, 32, 33, 36, 38, 43, 44, 47, 49, 54, 55, 58, 60,
+#65, 66, 69, 71, 76, 77 ) ) AND NOT (( atom.ele H ) )'
+#FROZ_RECEPTOR_ASL ' '
+REST_RECEPTOR_SQL 'name GLOB 'C*''
+#FROZ_RECEPTOR_SQL ' '
+# force constant of receptor atomic restraints in kcal/mol/A^2
+REST_RECEPTOR_KF 0.6
+#Temperature in K
+TEMPERATURE 300
+# number of equilibration MD steps
+EQUILIBRATION_STEPS 100
+# number of production MD steps.
+PRODUCTION_STEPS 1000
+#Frequency of printing information in output file in number of steps. The number
+#of binding energy samples collected for each replica is
+#PRODUCTION_STEPS/PRNT_FREQUENCY = 500 in this case.
+#500 x 16replicas = 800 samples in total
+PRNT_FREQUENCY 1000
