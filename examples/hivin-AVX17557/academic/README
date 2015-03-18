@@ -6,7 +6,7 @@
 
     source /home/tuf29141/set_schrodinger_env.2013-3.bashrc
 
-    $SCHRODINGER/run /home/tuf29141/software/bedam_workflow/bedam_prep.py hivin-avx17557.cntl >& bedam_prep.log
+    $SCHRODINGER/run /home/tuf29141/software/bedam_workflow/bedam_prep_ac.py hivin-avx17557.cntl >& bedam_prep_ac.log
 
 
 3) prepare hivin-avx17557_mintherm.qsub

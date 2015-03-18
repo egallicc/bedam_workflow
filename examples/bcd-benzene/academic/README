@@ -12,7 +12,7 @@
 2)  prepare the bedam inp files 
 
     source /home/tuf29141/set_schrodinger_env.2013-3.bashrc
-    $SCHRODINGER/run ~/software/bedam_workflow/bedam_prep.py bcd-benzene.cntl >& bedam_prep.log
+    $SCHRODINGER/run ~/software/bedam_workflow/bedam_prep_ac.py bcd-benzene.cntl >& bedam_prep_ac.log
 
 
 3) prepare bcd-benzene_mintherm.qsub

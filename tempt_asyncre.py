@@ -5,7 +5,7 @@ $Revision: 0.1 $
 A class to prepare Temperature AsyncRE jobs
 
 """
-# Contributors: Emilio Gallicchio
+# Contributors: Emilio Gallicchio, Junchao Xia
 
 import os, sys, time, re, glob
 from schrodinger.utils import cmdline

@@ -1,11 +1,13 @@
 # IMPACT package from run simulation ( commerical, academic, wcg)
-IMPACT_PACKAGE 'academic' 
+# TEMPLATE_PATH '/home/tuf29141/software/bedam_workflow/templates/bedam1d' 
 # environment source file to set the commercial schrodinger for preparing input files
 COMMERCIAL_SCHRODINGER_EVN '/home/tuf29141/set_schrodinger_env.2013-3.bashrc'
 # enveroment source file to set commercial IMPACT for adding agbnp
-AGBNP_IMPACT_EVN '/home/tuf29141/set_impact2014_proacademic.bashrc'
+AGBNP_SCRIPT '/home/tuf29141/software/bedam_workflow'
 # enveroment source file to set academic IMPACT for adding internal atom index
 ACADEMIC_IMPACT_EVN '/home/tuf29141/set_academic_impact.bashrc' 
+# path to MBAR for binding energy calculations
+MBAR_PATH '/home/tuf29141/software/bedam_workflow/pymbar-1.0d/pymbar'
 #name of receptor .mae file
 RECEPTOR_FILE 'recptor_17557.mae'
 #name of ligand .mae file

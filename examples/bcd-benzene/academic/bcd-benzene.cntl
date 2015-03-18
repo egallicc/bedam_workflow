@@ -1,11 +1,13 @@
 # IMPACT package from run simulation ( commerical, academic, wcg)
-IMPACT_PACKAGE 'academic' 
+# TEMPLATE_PATH '/home/tuf29141/software/bedam_workflow/templates/bedam1d' 
 # environment source file to set the commercial schrodinger for preparing input files
 COMMERCIAL_SCHRODINGER_EVN '/home/tuf29141/set_schrodinger_env.2013-3.bashrc'
-# enviroment source file to set commercial IMPACT for adding agbnp
-AGBNP_IMPACT_EVN '/home/tuf29141/set_impact2014_proacademic.bashrc'
-# enviroment source file to set academic IMPACT for adding internal atom index
+# enveroment source file to set commercial IMPACT for adding agbnp
+AGBNP_SCRIPT '/home/tuf29141/software/bedam_workflow'
+# enveroment source file to set academic IMPACT for adding internal atom index
 ACADEMIC_IMPACT_EVN '/home/tuf29141/set_academic_impact.bashrc' 
+# path to MBAR for binding energy calculations
+MBAR_PATH '/home/tuf29141/software/bedam_workflow/pymbar-1.0d/pymbar'
 #name of receptor .mae file
 RECEPTOR_FILE 'bcd_recpt.maegz'
 #name of ligand .mae file
@@ -37,7 +39,8 @@ REST_LIGAND_CMTOL 6.0
 #REST_RECEPTOR_ASL '(not (atom.num 3, 5, 10, 11, 14, 16, 21, 22, 25, 27, 32, 33, 36, 38, 43, 44, 47, 49, 54, 55, 58, 60,
 #65, 66, 69, 71, 76, 77 ) ) AND NOT (( atom.ele H ) )'
 #FROZ_RECEPTOR_ASL ' '
-REST_RECEPTOR_SQL 'name GLOB 'C*''
+REST_RECEPTOR_SQL 'name GLOB 'C1*' OR name GLOB 'C2*' OR name GLOB 'C3*' OR name GLOB 'C4*' OR name GLOB 'O4*' OR name GLOB 'C5*' OR name GLOB 'O5*''
+#REST_RECEPTOR_SQL 'name GLOB 'C*''
 #FROZ_RECEPTOR_SQL ' '
 # force constant of receptor atomic restraints in kcal/mol/A^2
 REST_RECEPTOR_KF 0.6
@@ -51,6 +54,6 @@ PRODUCTION_STEPS 500000
 #of binding energy samples collected for each replica is
 #PRODUCTION_STEPS/PRNT_FREQUENCY = 500 in this case.
 #500 x 16replicas = 800 samples in total
-PRNT_FREQUENCY 1000
+PRNT_FREQUENCY 100
 # Frequency of saving trajectory frames. 500 frames per replica.
-TRJ_FREQUENCY 1000
+TRJ_FREQUENCY 100
