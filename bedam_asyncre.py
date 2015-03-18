@@ -19,16 +19,14 @@ import sqlite3 as lite
 
 from math import *
 
-from bedam import bedam_job
+from bedam_prep_ac import bedam_prep_ac
 
-class bedam_job_asyncre(bedam_job):
+class bedam_job_asyncre(bedam_prep_ac):
     """
     Class to set up BEDAM calculations
     """
     def __init__(self, command_file, options):
-        bedam_job.__init__(self, command_file, options)
-        self.setupTemplatesASyncRE()
-
+        bedam_prep_ac.__init__(self, command_file, options)
 
 #
 # Impact input file templates for academic
@@ -515,57 +513,6 @@ $IMPACT_EXEC/main1m $1
         f.close
 
 #
-# writes receptor dms file with restraints
-#
-    def writeRecStructureDMSFile(self):
-        if self.recidxfile is None :
-            msg = "writeRecStructureDMSFile: Internal error: Structure file not found"
-            self.exit(msg)            
-        if not os.path.exists(self.recidxfile):
-            msg = 'File does not exist: %s' % self.recidxfile
-            self.exit(msg)
-
-        rest_sql =  self.keywords.get('REST_RECEPTOR_SQL')
-        if rest_sql is not None: 
-            con = lite.connect(self.recidxfile)
-            recpt_cmd = "PRAGMA table_info(particle)";
-            columnExists = False; 
-            with con:
-                cur = con.cursor()  
-                cur.execute(recpt_cmd)
-                rows = cur.fetchall()
-                for row in rows:
-                    if row[1] == "grp_buffer" : 
-                        columnExists = True
-                if not columnExists : 
-                    cur.execute("ALTER TABLE particle ADD COLUMN grp_buffer int DEFAULT(0);")
-                recpt_cmd = "SELECT id FROM particle WHERE " + rest_sql
-                cur.execute(recpt_cmd)
-                atoms = cur.fetchall()      
-                for iat in atoms:
-                    cur.execute("UPDATE particle SET grp_buffer=? WHERE Id=?", (2, iat[0]))
- 
-        froz_sql =  self.keywords.get('FROZ_RECEPTOR_SQL')
-        if froz_sql is not None: 
-            con = lite.connect(self.recidxfile)
-            recpt_cmd = "PRAGMA table_info(particle)";
-            columnExists = False; 
-            with con:
-                cur = con.cursor()  
-                cur.execute(recpt_cmd)
-                rows = cur.fetchall()
-                for row in rows:
-                    if row[1] == "grp_frozen" : 
-                        columnExists = True
-                if not columnExists : 
-                    cur.execute("ALTER TABLE particle ADD COLUMN grp_frozen int DEFAULT(0);")
-                recpt_cmd = "SELECT id FROM particle WHERE " + froz_sql
-                cur.execute(recpt_cmd)
-                atoms = cur.fetchall()      
-                for iat in atoms:
-                    cur.execute("UPDATE particle SET grp_frozen=? WHERE Id=?", (1, iat[0]))
-
-#
 # writes the Impact input file for minimization/thermalization
 #
     def  writeThermInputFile(self):
@@ -623,6 +570,7 @@ $IMPACT_EXEC/main1m $1
         f = open(impact_input_file, "w")
         f.write(input)
         f.close
+
 
 #
 # writes the Impact input file for AsyncRE production
@@ -775,12 +723,15 @@ if __name__ == '__main__':
     
     print "Reading options"
     bedam = bedam_job_asyncre(commandFile, options)
+
+    print "Set put templates for input files ..."
+    bedam.setupTemplatesASyncRE()
     print "Analyzing structure files ..."
     bedam.getDesmondDMSFiles()
     print "Writing BEDAM restraint file ..."
-    bedam.writeRestraintFileFromDMS()
+    bedam.writeRestraintFile()
     print "Adding atomic restraints to receptor file ..."
-    bedam.writeRecStructureDMSFile()
+    bedam.writeRecStructureFile()
     print "Writing job input files ..."
     bedam.writeCntlFile()
     bedam.writeThermInputFile()    

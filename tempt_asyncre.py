@@ -19,16 +19,14 @@ import sqlite3 as lite
 
 from math import *
 
-from bedam import bedam_job
+from bedam_prep_ac import bedam_prep_ac
 
-class tempt_job_asyncre(bedam_job):
+class tempt_job_asyncre(bedam_prep_ac):
     """
     Class to set up BEDAM calculations
     """
     def __init__(self, command_file, options):
-        bedam_job.__init__(self, command_file, options)
-        self.setupTemplatesASyncRE()
-
+        bedam_prep_ac.__init__(self, command_file, options)
 
 #
 # Impact input file templates for academic
@@ -667,6 +665,9 @@ if __name__ == '__main__':
     
     print "Reading options"
     tempt = tempt_job_asyncre(commandFile, options)
+
+    print "Set up templates for input files ..."
+    tempt.setupTemplatesASyncRE()
     print "Analyzing structure files ..."
     tempt.getDesmondDMSFiles()
     print "Adding atomic restraints to receptor file ..."
