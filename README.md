@@ -3,6 +3,8 @@
 
 			  Emilio Gallicchio
 		      emilio.gallicchio@gmail.com
+                            Junchao Xia
+                        junchaoxia@hotmail.com
 
  Please acknowledge use of this software citing the following publication:
 
@@ -13,7 +15,9 @@
  Copyright and Disclaimers
  -------------------------
 
- Copyright (c) 2010-2013 Emilio Gallicchio, emilio.gallicchio@gmail.com
+ Copyright (c) 2010-2013 
+ Emilio Gallicchio, emilio.gallicchio@gmail.com
+ Junchao Xia, junchaoxia@hotmail.com
 
  License Agreement and Disclaimers
  ---------------------------------
@@ -70,6 +74,8 @@ $SCHRODINGER/impact -i <jobname>_remd.inp -LOCAL
 A control file ('bedam.cntl' above) is used to specify parameters and
 settings. Examples for some of the main settings are:
 
+     # path to MBAR for binding energy calculations
+     MBAR_PATH '/home/tuf29141/software/bedam_workflow/pymbar-1.0d/pymbar'
      #name of receptor .mae file
      RECEPTOR_FILE 'bcy_noprop.maegz'
      #name of ligand .mae file
@@ -118,5 +124,6 @@ definition (see above) of the binding site region in terms of
 a receptor-ligand restraint potential. Analysis of the results produce,
 among other things, the estimated values of the binding free energy.
 
-See the 'examples' directory for an example of usage for a host guest
-system. Similar procedures are used for protein-ligand receptors.
+See the 'examples' directory for examples of usage for a host guest
+system using commercial or academic IMPACT. Similar procedures are 
+used for protein-ligand receptors.
