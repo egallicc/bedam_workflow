@@ -3,6 +3,7 @@
 
 		Emilio Gallicchio, emilio.gallicchio@gmail.com
 		  	Junchao Xia, junchaoxia@hotmail.com
+			  Ronald Levy, ronlevy@temple.edu 
 
  Please acknowledge use of this software citing the following publication:
 
@@ -18,6 +19,8 @@
  Emilio Gallicchio, emilio.gallicchio@gmail.com
 
  Junchao Xia, junchaoxia@hotmail.com
+
+ Ronald Levy, ronlevy@temple.edu
 
  License Agreement and Disclaimers
  ---------------------------------
