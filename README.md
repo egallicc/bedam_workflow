@@ -1,10 +1,8 @@
 		        BEDAM WORKFLOW  (v1.0)
 		    =============================
 
-			Emilio Gallicchio
-		   emilio.gallicchio@gmail.com
-		  	  Junchao Xia
-		      junchaoxia@hotmail.com
+		Emilio Gallicchio, emilio.gallicchio@gmail.com
+		  	Junchao Xia, junchaoxia@hotmail.com
 
  Please acknowledge use of this software citing the following publication:
 
@@ -16,7 +14,9 @@
  -------------------------
 
  Copyright (c) 2010-2013 
+
  Emilio Gallicchio, emilio.gallicchio@gmail.com
+
  Junchao Xia, junchaoxia@hotmail.com
 
  License Agreement and Disclaimers
@@ -59,7 +59,8 @@
  This python workflow facilitates the preparation and the analysis of
  BEDAM binding free energy calculations. It is designed to work with
  the IMPACT program within the Schrodinger computational
- environment. The workflow works in three steps:
+ environment and also the academic version. The workflow for commercial
+ IMPACT works in three steps:
 
 1. System Preparation
  $SCHRODINGER/run bedam_prep.py bedam.cntl
@@ -124,6 +125,6 @@ definition (see above) of the binding site region in terms of
 a receptor-ligand restraint potential. Analysis of the results produce,
 among other things, the estimated values of the binding free energy.
 
-See the 'examples' directory for examples of usage for a host guest
+See the 'examples' directory for other examples of usage for a host guest
 system using commercial or academic IMPACT. Similar procedures are 
 used for protein-ligand receptors.

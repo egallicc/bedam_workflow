@@ -1,3 +1,7 @@
+# PATH to templates for input files
+# TEMPLATE_PATH '/home/tuf29141/software/bedam_workflow/templates/bedam1d'
+# path to MBAR for binding energy calculations
+MBAR_PATH '/home/tuf29141/software/bedam_workflow/pymbar-1.0d/pymbar'
 #name of receptor .mae file
 RECEPTOR_FILE 'bcy_noprop.maegz'
 #name of ligand .mae file
