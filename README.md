@@ -1,10 +1,10 @@
 		        BEDAM WORKFLOW  (v1.0)
 		    =============================
 
-			  Emilio Gallicchio
-		      emilio.gallicchio@gmail.com
-                            Junchao Xia
-                        junchaoxia@hotmail.com
+			Emilio Gallicchio
+		   emilio.gallicchio@gmail.com
+		  	  Junchao Xia
+		      junchaoxia@hotmail.com
 
  Please acknowledge use of this software citing the following publication:
 
