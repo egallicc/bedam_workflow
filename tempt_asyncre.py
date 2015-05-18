@@ -288,10 +288,10 @@ $IMPACT_EXEC/main1m $1
             msg = 'tempt_asyncre: File does not exist: %s' % mol_file
             self.exit(msg)
 
-        com_shrod_source =  self.keywords.get('COMMERCIAL_SCHRODINGER_EVN')
-        if not com_shrod_source:
-            msg = "tempt_asyncre: No commerical shrodinger source file specified in the input file"
-            self.exit(msg)
+#        com_shrod_source =  self.keywords.get('COMMERCIAL_SCHRODINGER_EVN')
+#        if not com_shrod_source:
+#            msg = "tempt_asyncre: No commerical shrodinger source file specified in the input file"
+#            self.exit(msg)
 
         print "Convert maegz file to cms file "
         desmond_builder_file = 'des_builder.msj'
@@ -300,27 +300,23 @@ $IMPACT_EXEC/main1m $1
         input =  self.input_cms
         f.write(input)
         f.close()
-        source_cmd = '. ' + com_shrod_source
         cmd = '$SCHRODINGER/utilities/multisim' + ' -JOBNAME ' + self.jobname + ' -m ' + desmond_builder_file + ' ' + mol_file + ' -o ' + cms_file + ' -HOST localhost -maxjob 1 -WAIT'
-        cms_cmd = source_cmd + ";" + cmd
-        os.system(cms_cmd)
+        os.system(cmd)
 
         print "Convert cms files to dms files"
         dms_file = self.jobname + '.dms'
 	cmd = '$SCHRODINGER/run -FROM desmond mae2dms ' + cms_file + ' ' + dms_file
-        dms_cmd = source_cmd + ";" + cmd
-        os.system(dms_cmd)
+        os.system(cmd)
 
         print "add agbnp parameters into dms files"
         agbnp_cmd =  "$SCHRODINGER/run add_agbnp2.py " + dms_file
-        agbnp_cmd = source_cmd + ";" + agbnp_cmd
         os.system(agbnp_cmd)
 
         print "add internal atom indexes into dms files"
-        acd_impact_source =  self.keywords.get('ACADEMIC_IMPACT_EVN')
-        if not acd_impact_source:
-            msg = "tempt_asyncre: No academic IMPACT source file specified in the input file"
-            self.exit(msg)
+#        acd_impact_source =  self.keywords.get('ACADEMIC_IMPACT_EVN')
+#        if not acd_impact_source:
+#            msg = "tempt_asyncre: No academic IMPACT source file specified in the input file"
+#            self.exit(msg)
         impact_input_file =   self.jobname + '_idx' + '.inp'
         impact_output_file =  self.jobname + '_idx' + '.out'
         impact_jobtitle =     self.jobname + '_idx'
@@ -330,9 +326,12 @@ $IMPACT_EXEC/main1m $1
         f.write(input)
         f.close()
         idx_log_file =  self.jobname + '_idx' + '.log'
-        source_cmd = '. ' + acd_impact_source
+        
+        impact_home = os.environ['IMPACTHOME']
+        os.environ['IMP_ROOT'] = impact_home
+        os.environ['IMPACT_EXEC'] = impact_home + "/bin/Linux-x86_64"
+        os.environ['LD_LIBRARY_PATH'] = "$LD_LIBRARY_PATH:" + impact_home + "/lib/Linux-x86_64"
         idx_cmd =  "$IMPACT_EXEC/main1m " + impact_input_file + " > " + idx_log_file + " 2>&1 "
-        idx_cmd =  source_cmd + ";" + idx_cmd
         os.system(idx_cmd)
         if not os.path.exists(out_file):
             msg = "Impact job to generate dms files with idx failed"
@@ -369,13 +368,11 @@ $IMPACT_EXEC/main1m $1
         input += "ENGINE_INPUT_BASENAME = '%s'\n" % self.jobname
 
         if job_transport == 'SSH':
-            multiarch = self.keywords.get('MULTIARCH')
-            if multiarch == 'YES':
-                exec_directory =  self.keywords.get('EXEC_DIRECTORY')
-                if exec_directory is None:
-                    msg = "writeCntlFile: multiarch ASyncRE requires EXEC_DIRECTORY"
-                    self.exit(msg)
-                input += "EXEC_DIRECTORY = '%s'\n" % exec_directory
+            exec_directory =  self.keywords.get('EXEC_DIRECTORY')
+            if exec_directory is None:
+                msg = "writeCntlFile: SSH transport requires EXEC_DIRECTORY"
+                self.exit(msg)
+            input += "EXEC_DIRECTORY = '%s'\n" % exec_directory
 
         input += "RE_SETUP = 'YES'\n"
 
@@ -594,20 +591,7 @@ $IMPACT_EXEC/main1m $1
             self.exit(msg)
 
         if job_transport == 'SSH':
-            multiarch = self.keywords.get('MULTIARCH')
-            if multiarch is not None and multiarch == 'YES':
-                input = self.input_runimpact_multiarch
-            else:
-                subjob_cores = self.keywords.get('SUBJOB_CORES')
-                if subjob_cores is None:
-                    subjob_cores = 1
-                exec_directory =  self.keywords.get('EXEC_DIRECTORY')
-                if exec_directory is None:
-                    msg = "writeRunimpactFile: EXEC_DIRECTORY is required"
-                    self.exit(msg)
-                input = self.input_runimpact_standard.format(
-                    acd_impact_home = exec_directory,
-                    subjob_cores = subjob_cores)
+            input = self.input_runimpact_multiarch
             f = open('runimpact', "w")
             f.write(input)
             f.close
