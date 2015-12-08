@@ -385,9 +385,9 @@ write file -
 "%s" *
 
 CREATE
-  build primary name species1 type auto read sqldb file -
+  build primary name species1 type auto read maestro file -
 "%s"
-  build primary name species2 type auto read sqldb file -
+  build primary name species2 type auto read maestro file -
 "%s"
 QUIT
 
@@ -1048,7 +1048,7 @@ END
             i += 1
 
         input = self.input_trj % (impact_output_file, impact_jobtitle, 
-                                   self.receptor_file_restr , self.ligand_file_restr, 
+                                   self.receptor_file, self.ligand_file, 
                                   umax,
                                    rest_kf, nlambdas, lambda_list, 
                                    nlambdas)
