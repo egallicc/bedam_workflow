@@ -389,6 +389,8 @@ CREATE
 "%s"
   build primary name species2 type auto read maestro file -
 "%s"
+  build types name species1
+  build types name species2
 QUIT
 
 SETMODEL
