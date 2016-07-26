@@ -164,12 +164,205 @@ QUIT
 END
 """
 
+#
+#  write the dihedral list file for flattening simulation 
+#
+    def writeDihedralFlatFile(self):
+        # check that structure files with internal indexes have been generated
+        if self.recidxfile is None or self.ligidxfile is None:
+            msg = "writeRestraintFile: Internal error: structure files not found"
+            self.exit(msg)
+
+        rcp_dihe_str =  self.keywords.get('FLAT_DIHE_RECSQL')
+        lig_dihe_str =  self.keywords.get('FLAT_DIHE_LIGSQL')
+
+        if rcp_dihe_str or lig_dihe_str :
+           dihe_flatfile = self.keywords.get('FLAT_DIHE_FILE')
+           f = open(dihe_flatfile,"w")
+
+        if not rcp_dihe_str:
+            msg = "bedam_prep: No atom selection specified for dihedral flattening of receptor"
+            print msg
+        else : 
+            atompairs = rcp_dihe_str.split(',')
+            npairs = len(atompairs)
+            sec_atoms=[]
+            thd_atoms=[]
+            for atompair in atompairs :
+                tempatoms = atompair.split(' ')
+                sec_atoms.append(int(tempatoms[0])-1)
+                thd_atoms.append(int(tempatoms[1])-1)
+            con = lite.connect(self.recidxfile)
+            ii_atoms_idx=[] 
+            with con: 
+                cur = con.cursor()
+                cur.execute("SELECT i_i_internal_atom_index FROM particle;")
+                rows=cur.fetchall()
+                for row in rows:
+                    ii_atoms_idx.append(row[0])
+
+                flat_dihlist=[]
+                for i in range(0,len(sec_atoms)) :
+                    cur.execute("SELECT dihedral_trig_term.p0,dihedral_trig_term.p1,dihedral_trig_term.p2,dihedral_trig_term.p3,dihedral_trig_term.param,pair_12_6_es_term.param FROM dihedral_trig_term LEFT OUTER JOIN pair_12_6_es_term ON (dihedral_trig_term.p0=pair_12_6_es_term.p0 AND dihedral_trig_term.p3=pair_12_6_es_term.p1) OR (dihedral_trig_term.p3=pair_12_6_es_term.p0 AND dihedral_trig_term.p0=pair_12_6_es_term.p1) where (dihedral_trig_term.p1=? AND dihedral_trig_term.p2=?);", (sec_atoms[i],thd_atoms[i]))
+                    rows=cur.fetchall()
+                    for row in rows: 
+                       if row[5] is not None :
+                          p0t3=[]
+                          p0t3.append(row[0])
+                          p0t3.append(row[1])
+                          p0t3.append(row[2])
+                          p0t3.append(row[3])
+                          flat_dihlist.append(p0t3)
+                    vn=[]
+                    phase=[1,1,-1,1,-1,1,-1]
+                    for i in range(0,7) :
+                        vn.append(0.0)
+
+                for j in range(0, len(flat_dihlist)) :
+                    cur.execute("SELECT p0,p1,p2,p3,phi0,fc0,fc1,fc2,fc3,fc4,fc5,fc6 FROM dihedral_trig where (p0=? AND p1=? AND p2=? AND p3=?)", (flat_dihlist[j][0],flat_dihlist[j][1],flat_dihlist[j][2],flat_dihlist[j][3]))
+	            rows=cur.fetchall()
+                    for row in rows:
+                        sum = 0.0
+                        for i in range(1,7) :
+                            vn[i]=row[i+5]*phase[i]
+                            sum += row[i+5]*phase[i]
+                        vn[0]=row[5]-sum
+                        i_int=int(ii_atoms_idx[row[0]])
+                        j_int=int(ii_atoms_idx[row[1]])
+                        k_int=int(ii_atoms_idx[row[2]])
+                        l_int=int(ii_atoms_idx[row[3]])
+                        if (abs(vn[0])>0.0) :
+                           f.write("%d %d %d %d %d %f %d %d\n" %(1,i_int,j_int,k_int,l_int,vn[0],phase[0],0))
+                        for i in range(1,7) :
+                            if abs(vn[i]) > 0.0 : 
+                               f.write("%d %d %d %d %d %f %d %d\n" %(1,i_int,j_int,k_int,l_int,vn[i],phase[i],i))
+            con.close()
+
+        if not lig_dihe_str:
+            msg = "bedam_prep: No atom selection specified for dihedral flattening of ligand"
+            print msg
+        else :
+            atompairs = lig_dihe_str.split(',')
+            npairs = len(atompairs)
+            sec_atoms=[]
+            thd_atoms=[]
+            for atompair in atompairs :
+                tempatoms = atompair.split(' ')
+                sec_atoms.append(int(tempatoms[0])-1)
+                thd_atoms.append(int(tempatoms[1])-1)
+            con = lite.connect(self.ligidxfile)
+            ii_atoms_idx=[]
+            with con:
+                cur = con.cursor()
+                cur.execute("SELECT i_i_internal_atom_index FROM particle;")
+                rows=cur.fetchall()
+                for row in rows:
+                    ii_atoms_idx.append(row[0])
+
+                flat_dihlist=[]
+                for i in range(0,len(sec_atoms)) :
+                    cur.execute("SELECT dihedral_trig_term.p0,dihedral_trig_term.p1,dihedral_trig_term.p2,dihedral_trig_term.p3,dihedral_trig_term.param,pair_12_6_es_term.param FROM dihedral_trig_term LEFT OUTER JOIN pair_12_6_es_term ON (dihedral_trig_term.p0=pair_12_6_es_term.p0 AND dihedral_trig_term.p3=pair_12_6_es_term.p1) OR (dihedral_trig_term.p3=pair_12_6_es_term.p0 AND dihedral_trig_term.p0=pair_12_6_es_term.p1) where (dihedral_trig_term.p1=? AND dihedral_trig_term.p2=?);", (sec_atoms[i],thd_atoms[i]))
+                    rows=cur.fetchall()
+                    for row in rows:
+                       if row[5] is not None :
+                          p0t3=[]
+                          p0t3.append(row[0])
+                          p0t3.append(row[1])
+                          p0t3.append(row[2])
+                          p0t3.append(row[3])
+                          flat_dihlist.append(p0t3)
+                    vn=[]
+                    phase=[1,1,-1,1,-1,1,-1]
+                    for i in range(0,7) :
+                        vn.append(0.0)
+
+                for j in range(0, len(flat_dihlist)) :
+                    cur.execute("SELECT p0,p1,p2,p3,phi0,fc0,fc1,fc2,fc3,fc4,fc5,fc6 FROM dihedral_trig where (p0=? AND p1=? AND p2=? AND p3=?)", (flat_dihlist[j][0],flat_dihlist[j][1],flat_dihlist[j][2],flat_dihlist[j][3]))
+                    rows=cur.fetchall()
+                    for row in rows:
+                        sum = 0.0
+                        for i in range(1,7) :
+                            vn[i]=row[i+5]*phase[i]
+                            sum += row[i+5]*phase[i]
+                        vn[0]=row[5]-sum
+                        i_int=int(ii_atoms_idx[row[0]])
+                        j_int=int(ii_atoms_idx[row[1]])
+                        k_int=int(ii_atoms_idx[row[2]])
+                        l_int=int(ii_atoms_idx[row[3]])
+                        if (abs(vn[0])>0.0) :
+                           f.write("%d %d %d %d %d %f %d %d\n" %(2,i_int,j_int,k_int,l_int,vn[0],phase[0],0))
+                        for i in range(1,7) :
+                            if abs(vn[i]) > 0.0 :
+                               f.write("%d %d %d %d %d %f %d %d\n" %(2,i_int,j_int,k_int,l_int,vn[i],phase[i],i))
+            con.close()
+        f.close()
+                
+#
+#  write the atom list file for nonbonded flattening simulation 
+#
+    def writeNonbFlatFile(self):
+        # check that structure files with internal indexes have been generated
+        if self.recidxfile is None or self.ligidxfile is None:
+            msg = "writeRestraintFile: Internal error: structure files not found"
+            self.exit(msg)
+
+        rcp_nonb_str =  self.keywords.get('FLAT_NONB_RECSQL')
+        lig_nonb_str =  self.keywords.get('FLAT_NONB_LIGSQL')
+
+        if rcp_nonb_str or lig_nonb_str :
+           nonb_flatfile = self.keywords.get('FLAT_NONB_FILE')
+           f = open(nonb_flatfile,"w")
+
+        if not rcp_nonb_str:
+            msg = "bedam_prep: No atom selection specified for nonbonded flattening of receptor"
+            print msg
+        else :
+            atoms = rcp_nonb_str.split(',')
+            natoms = len(atoms)
+            nonb_atoms=[]
+            for atom in atoms :
+                nonb_atoms.append(int(atom)-1)
+            con = lite.connect(self.recidxfile)
+            ii_atoms_idx=[]
+            with con:
+                cur = con.cursor()
+                cur.execute("SELECT i_i_internal_atom_index FROM particle;")
+                rows=cur.fetchall()
+                for row in rows:
+                    ii_atoms_idx.append(row[0])
+                for i in range(0,natoms) :
+                    i_int=int(ii_atoms_idx[nonb_atoms[i]])
+                    f.write("%d %d\n" %(1,i_int))
+            con.close()
+
+        if not lig_nonb_str:
+            msg = "bedam_prep: No atom selection specified for nonbonded flattening of ligand"
+            print msg
+        else :
+            atoms = lig_nonb_str.split(',')
+            natoms = len(atoms)
+            nonb_atoms=[]
+            for atom in atoms :
+                nonb_atoms.append(int(atom)-1)
+            con = lite.connect(self.ligidxfile)
+            ii_atoms_idx=[]
+            with con:
+                cur = con.cursor()
+                cur.execute("SELECT i_i_internal_atom_index FROM particle;")
+                rows=cur.fetchall()
+                for row in rows:
+                    ii_atoms_idx.append(row[0])
+                for i in range(0,natoms) :
+                    i_int=int(ii_atoms_idx[nonb_atoms[i]])
+                    f.write("%d %d\n" %(2,i_int))
+            con.close()
+        f.close() 
     
 ##################### MAIN CODE ##########################
 if __name__ == '__main__':
 
     # Setup the logger
-    logger = schrodinger.utils.log.get_output_logger("bedam_prep_ac")
+    logger = schrodinger.utils.log.get_output_logger("bedam_prep_acflat")
 
     # Parse arguments:
     usage = "%prog [options] <inputfile>"
@@ -204,6 +397,10 @@ if __name__ == '__main__':
     bedam.writeRestraintFile()
     print "Adding atomic restraints to receptor file ..."
     bedam.writeRecStructureFile()
+    print "Create dihedral list for flattening  ..."
+    bedam.writeDihedralFlatFile()
+    print "Create nonbonded list for flattening  ..."
+    bedam.writeNonbFlatFile()
     print "Writing Minimization/Thermalization input file ..."
     bedam.writeThermInputFile()
     print "Writing Remd Production input file ..."
