@@ -1211,6 +1211,23 @@ END
             for i in range(len(self.binding_energies_bysim[k])):
                 f.write("%f %f\n" % (self.lambda_bysim[k][i],self.binding_energies_bysim[k][i]))
             f.close 
+
+#
+# Saves be/lambda series for each state in a/lbe_lmb/lbe_<lambda>.dat
+#
+    def lbe_lmb(self):
+        if self.binding_energies_bysim is None:
+            self.getBindingEnergies()
+
+        os.system("mkdir -p a/lbe_lmb")
+        for lmb in self.binding_energies_bylambda.keys():
+            file = "a/lbe_lmb/lbe_%f.dat" % lmb;
+            f = open(file ,"w")
+            for i in range(len(self.binding_energies_bysim[0])):
+                for k in range(len(self.binding_energies_bysim)):
+                    if self.lambda_bysim[k][i] == lmb :
+                        f.write("%f %f\n" % (self.lambda_bysim[k][i],self.binding_energies_bysim[k][i]))
+            f.close
         
 
 #

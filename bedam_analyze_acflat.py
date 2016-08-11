@@ -192,6 +192,23 @@ class bedam_analyze_acflat (bedam_job):
             f.close
 
 #
+# Saves fe/lambda series for each state in a/lfe_lmb/lfe_<lambda>.dat
+#
+    def lfe_lmb(self):
+        if self.flattening_energies_bysim is None:
+            self.getFlatteningEnergies()
+
+        os.system("mkdir -p a/lfe_lmb")
+        for lmb in self.binding_energies_bylambda.keys():
+            file = "a/lfe_lmb/lfe_%f.dat" % lmb;
+            f = open(file ,"w")
+            for i in range(len(self.flattening_energies_bysim[0])):
+                for k in range(len(self.flattening_energies_bysim)):
+                    if self.lambda_bysim[k][i] == lmb :
+                        f.write("%f %f\n" % (self.lambda_bysim[k][i],self.flattening_energies_bysim[k][i]))
+            f.close
+
+#
 # Saves fe_wolam/lambda trajectories for each simulation in a/lfe_trj/lfe_wolam_<sim>.dat
 #
     def lfe_wolam_trj(self):
@@ -205,6 +222,24 @@ class bedam_analyze_acflat (bedam_job):
             for i in range(len(self.flattening_energies2_bysim[k])):
                 f.write("%f %f\n" % (self.lambda_bysim[k][i],self.flattening_energies2_bysim[k][i]))
             f.close
+
+#
+# Saves fe/lambda series for each state in a/lfe_lmb/lfe_wolam_<lambda>.dat
+#
+    def lfe_wolam_lmb(self):
+        if self.flattening_energies2_bysim is None:
+            self.getFlatteningEnergies2()
+
+        os.system("mkdir -p a/lfe_wolam_lmb")
+        for lmb in self.binding_energies_bylambda.keys():
+            file = "a/lfe_wolam_lmb/lfe_wolam_%f.dat" % lmb;
+            f = open(file ,"w")
+            for i in range(len(self.flattening_energies2_bysim[0])):
+                for k in range(len(self.flattening_energies2_bysim)):
+                    if self.lambda_bysim[k][i] == lmb :
+                        f.write("%f %f\n" % (self.lambda_bysim[k][i],self.flattening_energies2_bysim[k][i]))
+            f.close
+
 
 # Runs MBAR using binding energies and flattening energies
 #
@@ -387,8 +422,11 @@ if __name__ == '__main__':
     print "Writing binding energy histograms/trajectories and flattening energy/traj..."
     bedam.be_histograms()
     bedam.lbe_trj()
+    bedam.lbe_lmb()
     bedam.lfe_trj()
+    bedam.lfe_lmb()
     bedam.lfe_wolam_trj()
+    bedam.lfe_wolam_lmb()
     print "Running MBAR:"
     (Deltaf_ij, dDeltaf_ij) = bedam.runMBAR()
     #Assume binding free energy is G(maxlambda)-G(minlambda)

@@ -50,6 +50,7 @@ if __name__ == '__main__':
     print "Writing binding energy histograms/trajectories ..."
     bedam.be_histograms()
     bedam.lbe_trj()
+    bedam.lbe_lmb()
     print "Running MBAR:"
     (Deltaf_ij, dDeltaf_ij) = bedam.runMBAR()
     #Assume binding free energy is G(maxlambda)-G(minlambda)
