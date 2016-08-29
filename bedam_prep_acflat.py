@@ -68,6 +68,7 @@ SETMODEL
   zonecons auto
   energy constraints bonds hydrogens
   energy flatten torsions read file dihedral.dat
+  energy flatten nonbonded read file nonbflat.dat
 QUIT
 
 MINI
