@@ -385,10 +385,12 @@ write file -
 "%s" *
 
 CREATE
-  build primary name species1 type auto read sqldb file -
+  build primary name species1 type auto read maestro file -
 "%s"
-  build primary name species2 type auto read sqldb file -
+  build primary name species2 type auto read maestro file -
 "%s"
+  build types name species1
+  build types name species2
 QUIT
 
 SETMODEL
@@ -525,19 +527,19 @@ END
 #
     def getDesmondDMSFiles(self):
  
-        receptor_file =  self.keywords.get('RECEPTOR_FILE')
-        if not receptor_file:
+        self.receptor_file =  self.keywords.get('RECEPTOR_FILE')
+        if not self.receptor_file:
             msg = "bedam_prep: No receptor file specified in the input file"
             self.exit(msg)
-        if not os.path.exists(receptor_file):
-            msg = 'File does not exist: %s' % receptor_file
+        if not os.path.exists(self.receptor_file):
+            msg = 'File does not exist: %s' % self.receptor_file
             self.exit(msg)
-        ligand_file =  self.keywords.get('LIGAND_FILE')
-        if not ligand_file:
+        self.ligand_file =  self.keywords.get('LIGAND_FILE')
+        if not self.ligand_file:
             msg = "bedam_prep: No ligand file specified in the input file"
             self.exit(msg)
-        if not os.path.exists(ligand_file):
-            msg = 'File does not exist: %s' % ligand_file
+        if not os.path.exists(self.ligand_file):
+            msg = 'File does not exist: %s' % self.ligand_file
             self.exit(msg)
         com_shrod_source =  self.keywords.get('COMMERCIAL_SCHRODINGER_EVN')
         if not com_shrod_source:
@@ -553,8 +555,8 @@ END
         f.write(input)
         f.close()
         source_cmd = '. ' + com_shrod_source
-        rcpt_cmd = '$SCHRODINGER/utilities/multisim' + ' -JOBNAME ' + self.jobname + ' -m ' + desmond_builder_file + ' ' + receptor_file + ' -o ' + rcpt_cms_file + ' -HOST localhost -maxjob 1 -WAIT'
-        lig_cmd =  '$SCHRODINGER/utilities/multisim' + ' -JOBNAME ' + self.jobname + ' -m ' + desmond_builder_file + ' ' + ligand_file + ' -o ' + lig_cms_file + ' -HOST localhost -maxjob 1 -WAIT' 
+        rcpt_cmd = '$SCHRODINGER/utilities/multisim' + ' -JOBNAME ' + self.jobname + ' -m ' + desmond_builder_file + ' ' + self.receptor_file + ' -o ' + rcpt_cms_file + ' -HOST localhost -maxjob 1 -WAIT'
+        lig_cmd =  '$SCHRODINGER/utilities/multisim' + ' -JOBNAME ' + self.jobname + ' -m ' + desmond_builder_file + ' ' + self.ligand_file + ' -o ' + lig_cms_file + ' -HOST localhost -maxjob 1 -WAIT' 
         # os.system(source_cmd)
         # os.system(rcpt_cmd)
         # os.system(lig_cmd)
@@ -1048,7 +1050,7 @@ END
             i += 1
 
         input = self.input_trj % (impact_output_file, impact_jobtitle, 
-                                   self.receptor_file_restr , self.ligand_file_restr, 
+                                   self.receptor_file, self.ligand_file, 
                                   umax,
                                    rest_kf, nlambdas, lambda_list, 
                                    nlambdas)
